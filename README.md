@@ -26,6 +26,14 @@ The application operates on a Formatting-First Policy. When a candidate uploads 
                            (Halts & Shows Error)                                                      (Runs ATS Engine & Shows Score)
 
 
+<<<<<<< HEAD
+=======
+
+
+                           
+
+
+>>>>>>> 4ad3998c2666f1dfee38c77e02983537c2ae1e44
 Text Readability Check: Rejects scanned/image-only PDFs with insufficient readable text (< 100 characters).
 
 Contact Structure: Verifies if valid Email or Phone Number formatting exists.
@@ -119,4 +127,8 @@ Open a Pull Request.
 
 📜 License
 
+<<<<<<< HEAD
 This project is open-source and available under the MIT License.
+=======
+This project is open-source and available under the MIT License.
+>>>>>>> 4ad3998c2666f1dfee38c77e02983537c2ae1e44
