@@ -20,10 +20,10 @@ The application operates on a Formatting-First Policy. When a candidate uploads 
 
 [ Upload PDF ] ──► [ Text Readability Check ] ──► [ Contact Info Validation ] ──► [ Section Headers Check ]
                                                                                          │
-                                         ┌───────────────────────────────────────────────┴──────────────────────────────┐
+                ┌───────────────────────────────────────────────┴──────────────────────────────┐
                                          ▼                                                                              ▼
-                              ❌ Formatting Failed                                                            ✅ Formatting Passed
-                           (Halts & Shows Error)                                                      (Runs ATS Engine & Shows Score)
+       ❌ Formatting Failed                                                            ✅ Formatting Passed
+        (Halts & Shows Error)                                                      (Runs ATS Engine & Shows Score)
 
 
 <<<<<<< HEAD
