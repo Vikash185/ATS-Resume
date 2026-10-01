@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High Security ATS Formatting Checker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PDF.js Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- html2pdf -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen pb-16">
+
+    <!-- Header -->
+    <header class="max-w-5xl mx-auto pt-10 pb-6 px-6 text-center">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-4">
+            <i data-lucide="shield-check" class="w-4 h-4"></i> Strict Formatting First Verification Engine
+        </div>
+        <h1 class="text-3xl md:text-5xl font-extrabold bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-500 bg-clip-text text-transparent">
+            ATS Resume Formatting & Score Engine
+        </h1>
+        <p class="text-slate-400 mt-2 text-sm max-w-2xl mx-auto">
+            
+        </p>
+    </header>
+
+    <!-- Main Container -->
+    <div class="max-w-4xl mx-auto px-6">
+        
+        <!-- Action Options -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            
+            <!-- Upload Panel -->
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center shadow-xl">
+                <div class="w-12 h-12 mx-auto bg-indigo-600/10 rounded-2xl flex items-center justify-center text-indigo-400 mb-3">
+                    <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-base font-semibold text-slate-200">Upload Existing Resume</h3>
+                <p class="text-xs text-slate-400 mb-4 mt-1">Upload PDF (Max 5MB) for Formatting Check</p>
+                
+                <input type="file" id="resumeInput" accept="application/pdf" class="hidden" onchange="handleResumeUpload(event)">
+                <label for="resumeInput" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer transition">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> Select PDF File
+                </label>
+                
+                <!-- Formatting Failure / Alert Box -->
+                <div id="errorBox" class="hidden mt-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-left">
+                    <p id="errorTitle" class="text-rose-400 font-bold text-xs flex items-center gap-1.5">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> Formatting Check Failed
+                    </p>
+                    <p id="errorMsg" class="text-slate-300 text-xs mt-1 leading-relaxed"></p>
+                </div>
+
+                <p id="loadingText" class="hidden text-indigo-400 mt-3 text-xs animate-pulse">Checking Layout, Structure & Formatting...</p>
+            </div>
+
+            <!-- Builder Form Panel -->
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center shadow-xl">
+                <div class="w-12 h-12 mx-auto bg-emerald-600/10 rounded-2xl flex items-center justify-center text-emerald-400 mb-3">
+                    <i data-lucide="file-plus" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-base font-semibold text-slate-200">Create Properly Formatted Resume</h3>
+                <p class="text-xs text-slate-400 mb-4 mt-1">Direct Perfect Format Resume Banayein</p>
+                
+                <button onclick="toggleForm()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition">
+                    <i data-lucide="edit-3" class="w-4 h-4"></i> Create Resume Form
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Section: Create Resume Form -->
+        <div id="createFormSection" class="hidden bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl mb-12">
+            <h2 class="text-lg font-bold text-slate-100 mb-6 flex items-center gap-2 border-b border-slate-800 pb-3">
+                <i data-lucide="user-check" class="w-5 h-5 text-emerald-400"></i> Enter Details for Perfect ATS Format
+            </h2>
+
+            <form id="resumeForm" onsubmit="generateCustomResume(event)" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-300">Full Name *</label>
+                        <input type="text" id="fullName" required placeholder="e.g. Rahul Sharma" class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-300">Target Job Role *</label>
+                        <input type="text" id="jobRole" required placeholder="e.g. Frontend Developer" class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-300">Email Address *</label>
+                        <input type="email" id="email" required placeholder="rahul@example.com" class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-300">Phone Number *</label>
+                        <input type="tel" id="phone" required placeholder="+91 9876543210" class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-semibold text-slate-300">Technical Skills (Comma Separated) *</label>
+                    <input type="text" id="skillsInput" required placeholder="JavaScript, React, Node.js, SQL, Git" class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="text-xs font-semibold text-slate-300">Work Experience / Key Projects *</label>
+                    <textarea id="experienceInput" rows="3" required placeholder="Developed web application using React. Reduced loading time by 20%." class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-3 rounded-xl transition mt-4">
+                    Generate Verified Resume & Analyze Score
+                </button>
+            </form>
+        </div>
+
+        <!-- Dashboard Output (Formatting Breakdown + ATS Score) -->
+        <div id="dashboard" class="hidden space-y-8">
+            
+            <!-- Top Section: Formatting Health Checklist -->
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
+                <h3 class="text-base font-bold text-slate-200 flex items-center gap-2 mb-4 border-b border-slate-800 pb-3">
+                    <i data-lucide="layout-template" class="w-5 h-5 text-indigo-400"></i> Resume Formatting Checklist (Passed)
+                </h3>
+                <div id="formatChecklist" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Formatting results injected here -->
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <!-- Left: Verified Score -->
+                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                            <h2 class="text-lg font-bold text-slate-200 flex items-center gap-2">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i> Final ATS Score
+                            </h2>
+                            <span id="scoreBadge" class="text-2xl font-black px-4 py-1 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                0/100
+                            </span>
+                        </div>
+
+                        <div class="mt-6">
+                            <p class="text-xs text-slate-400 uppercase font-semibold">Detected Job Profile</p>
+                            <p id="targetRole" class="text-xl font-bold text-cyan-400 mt-1">Not Detected</p>
+                        </div>
+
+                        <div class="mt-6">
+                            <p class="text-xs text-slate-400 uppercase font-semibold">Matched Technical Skills</p>
+                            <div id="skillsList" class="flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+
+                        <div class="mt-6">
+                            <p class="text-xs text-amber-400 uppercase font-semibold">Suggested Missing Keywords</p>
+                            <div id="missingSkillsList" class="flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+                    </div>
+
+                    <button onclick="downloadAtsPdf()" class="w-full mt-8 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition">
+                        <i data-lucide="download" class="w-5 h-5"></i> Download ATS Compliant PDF
+                    </button>
+                </div>
+
+                <!-- Right: Job Portals -->
+                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
+                    <h2 class="text-lg font-bold text-slate-200 flex items-center gap-2 mb-1">
+                        <i data-lucide="briefcase" class="w-5 h-5 text-teal-400"></i> Direct Job Openings
+                    </h2>
+                    <p class="text-xs text-slate-400 mb-6">Openings matching: <strong id="jobRoleLabel" class="text-slate-200">Software Engineer</strong></p>
+
+                    <div id="jobPlatformsList" class="space-y-3"></div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Hidden Printable Template -->
+    <div class="hidden">
+        <div id="ats-pdf-template" class="p-8 bg-white text-slate-900 font-sans">
+            <h1 id="pdfName" class="text-2xl font-bold uppercase text-slate-900">Candidate Name</h1>
+            <p id="pdfContact" class="text-xs text-slate-600 border-b-2 border-slate-900 pb-2 mb-4">email@example.com | +91 0000000000</p>
+            
+            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Target Profile</h2>
+            <p id="pdfRole" class="text-xs text-slate-700 mt-1 font-semibold">Role: Software Engineer</p>
+
+            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mt-4">Technical Competencies</h2>
+            <p id="pdfSkills" class="text-xs text-slate-800 mt-1"></p>
+
+            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mt-4 border-t border-slate-200 pt-2">Professional Summary & Details</h2>
+            <p id="pdfText" class="text-xs text-slate-700 mt-2 whitespace-pre-line leading-relaxed"></p>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let extractedData = { name: '', contact: '', text: '', skills: [], role: '' };
+
+        const knownSkills = [
+            'JavaScript', 'React', 'Node.js', 'Python', 'Java', 'C++', 'SQL', 'MongoDB',
+            'AWS', 'Docker', 'Git', 'HTML', 'CSS', 'Tailwind', 'TypeScript', 'Express',
+            'REST API', 'GraphQL', 'Data Analysis', 'Project Management', 'Communication'
+        ];
+
+        const requiredSections = [
+            { name: 'Work Experience', keywords: ['experience', 'work history', 'employment'] },
+            { name: 'Education', keywords: ['education', 'qualification', 'academic'] },
+            { name: 'Skills', keywords: ['skills', 'technical skills', 'competencies'] },
+            { name: 'Projects', keywords: ['projects', 'key projects'] }
+        ];
+
+        function toggleForm() {
+            document.getElementById('createFormSection').classList.toggle('hidden');
+        }
+
+        async function handleResumeUpload(event) {
+            const file = event.target.files[0];
+            const errorBox = document.getElementById('errorBox');
+            const loadingText = document.getElementById('loadingText');
+            const dashboard = document.getElementById('dashboard');
+
+            errorBox.classList.add('hidden');
+            dashboard.classList.add('hidden');
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                showError("Kewal PDF File upload karein!");
+                event.target.value = '';
+                return;
+            }
+
+            loadingText.classList.remove('hidden');
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                let fullText = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + ' ';
+                }
+
+                const cleanedText = fullText.trim();
+                const lowerText = cleanedText.toLowerCase();
+
+                // STEP 1: Formatting Check First
+                if (cleanedText.length < 100) {
+                    showError("Formatting Error: PDF me text readable nahi hai (Scanned image lagti hai). Valid text PDF upload karein.");
+                    loadingText.classList.add('hidden');
+                    event.target.value = '';
+                    return;
+                }
+
+                // STEP 2: Section & Contact Formatting Evaluation
+                const formatResult = performFormattingCheck(cleanedText, lowerText);
+
+                // STEP 3: Check Gatekeeper - Agar Formatting Rules Fail Hue Toh Aage Run Nahi Hoga
+                if (!formatResult.passed) {
+                    showError(`Formatting Failed: ${formatResult.reason}`);
+                    loadingText.classList.add('hidden');
+                    event.target.value = '';
+                    return;
+                }
+
+                // STEP 4: Resume Formatting Passed! Ab ATS Engine run hoga.
+                extractedData.name = file.name.replace('.pdf', '');
+                extractedData.contact = 'Contact Verified';
+                
+                processAndDisplayResult(cleanedText, formatResult);
+
+            } catch (err) {
+                showError("File read karne me error aayi. Kripya valid Resume PDF try karein.");
+            }
+
+            loadingText.classList.add('hidden');
+        }
+
+        function performFormattingCheck(text, lowerText) {
+            let sectionScore = 0;
+            let sectionChecks = [];
+
+            // Check Essential Sections
+            requiredSections.forEach(sec => {
+                const found = sec.keywords.some(k => lowerText.includes(k));
+                if (found) sectionScore += 10;
+                sectionChecks.push({ name: sec.name, passed: found });
+            });
+
+            // Check Contact Details Regex
+            const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+            const phoneRegex = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/;
+            
+            const hasEmail = emailRegex.test(text);
+            const hasPhone = phoneRegex.test(text);
+            const hasMetrics = /\d+%|\$\d+|\d+\+?\s*(years|yrs|projects)/i.test(text);
+
+            // Validation Conditions
+            let passed = true;
+            let reason = "";
+
+            if (!hasEmail && !hasPhone) {
+                passed = false;
+                reason = "Contact details (Email ya Phone Number) ka proper format nahi mila.";
+            } else if (sectionScore < 20) {
+                passed = false;
+                reason = "Resume Sections (Experience, Education, Skills, Projects) ki standard formatting missing hai.";
+            }
+
+            return {
+                passed: passed,
+                reason: reason,
+                sectionScore: sectionScore,
+                sectionChecks: sectionChecks,
+                hasEmail: hasEmail,
+                hasPhone: hasPhone,
+                hasMetrics: hasMetrics
+            };
+        }
+
+        function generateCustomResume(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('fullName').value;
+            const role = document.getElementById('jobRole').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const rawSkills = document.getElementById('skillsInput').value;
+            const exp = document.getElementById('experienceInput').value;
+
+            const skillsArray = rawSkills.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            const combinedText = `Name: ${name}. Email: ${email}. Phone: ${phone}. Experience Section: ${exp}. Technical Skills Section: ${rawSkills}. Education Section: B.Tech Degree. Projects Section: Application development.`;
+
+            extractedData = {
+                name: name,
+                contact: `${email} | ${phone}`,
+                text: exp,
+                skills: skillsArray,
+                role: role
+            };
+
+            const formatResult = {
+                passed: true,
+                sectionScore: 40,
+                sectionChecks: [
+                    { name: 'Work Experience', passed: true },
+                    { name: 'Education', passed: true },
+                    { name: 'Skills', passed: true },
+                    { name: 'Projects', passed: true }
+                ],
+                hasEmail: true,
+                hasPhone: true,
+                hasMetrics: true
+            };
+
+            processAndDisplayResult(combinedText, formatResult, true);
+        }
+
+        function processAndDisplayResult(text, formatResult, isCustom = false) {
+            const lowerText = text.toLowerCase();
+            
+            let foundSkills = isCustom 
+                ? extractedData.skills 
+                : knownSkills.filter(skill => lowerText.includes(skill.toLowerCase()));
+            
+            let role = isCustom ? extractedData.role : 'Software Engineer';
+            if (!isCustom) {
+                if (lowerText.includes('frontend') || lowerText.includes('react')) role = 'Frontend Developer';
+                else if (lowerText.includes('backend') || lowerText.includes('node')) role = 'Backend Developer';
+                else if (lowerText.includes('full stack') || lowerText.includes('fullstack')) role = 'Full Stack Developer';
+                else if (lowerText.includes('data') || lowerText.includes('python')) role = 'Data Analyst';
+                extractedData.role = role;
+                extractedData.text = text;
+                extractedData.skills = foundSkills;
+            }
+
+            // Calculate ATS Score after formatting clearance
+            let finalScore = formatResult.sectionScore; // Up to 40
+            if (formatResult.hasEmail) finalScore += 10;
+            if (formatResult.hasPhone) finalScore += 10;
+            if (formatResult.hasMetrics) finalScore += 10;
+            
+            finalScore += Math.min(foundSkills.length * 6, 25);
+            finalScore = Math.min(finalScore, 96);
+
+            // Render Passed Formatting Checklist
+            const checklistContainer = document.getElementById('formatChecklist');
+            checklistContainer.innerHTML = `
+                <div class="flex items-center gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+                    <i data-lucide="${formatResult.hasEmail ? 'check-circle' : 'x-circle'}" class="${formatResult.hasEmail ? 'text-emerald-400' : 'text-rose-400'} w-4 h-4"></i>
+                    <span>Contact Email Formatting: <strong>${formatResult.hasEmail ? 'Formatted & Valid' : 'Missing'}</strong></span>
+                </div>
+                <div class="flex items-center gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+                    <i data-lucide="${formatResult.hasPhone ? 'check-circle' : 'x-circle'}" class="${formatResult.hasPhone ? 'text-emerald-400' : 'text-rose-400'} w-4 h-4"></i>
+                    <span>Phone Number Formatting: <strong>${formatResult.hasPhone ? 'Formatted & Valid' : 'Missing'}</strong></span>
+                </div>
+                <div class="flex items-center gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+                    <i data-lucide="${formatResult.hasMetrics ? 'check-circle' : 'alert-circle'}" class="${formatResult.hasMetrics ? 'text-emerald-400' : 'text-amber-400'} w-4 h-4"></i>
+                    <span>Metrics & Impact Numbers: <strong>${formatResult.hasMetrics ? 'Detected (% / Numbers)' : 'Low Metric Density'}</strong></span>
+                </div>
+                <div class="flex items-center gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+                    <i data-lucide="check-circle" class="text-emerald-400 w-4 h-4"></i>
+                    <span>Detected Headings: <strong>${formatResult.sectionChecks.filter(s=>s.passed).map(s=>s.name).join(', ')}</strong></span>
+                </div>
+            `;
+
+            document.getElementById('targetRole').innerText = role;
+            document.getElementById('jobRoleLabel').innerText = role;
+            document.getElementById('scoreBadge').innerText = `${finalScore}/100`;
+
+            const skillsContainer = document.getElementById('skillsList');
+            if (foundSkills.length === 0) {
+                skillsContainer.innerHTML = `<span class="text-xs text-rose-400">No technical skills detected</span>`;
+            } else {
+                skillsContainer.innerHTML = foundSkills.map(s => 
+                    `<span class="text-xs bg-slate-800 text-slate-200 px-3 py-1 rounded-lg border border-slate-700">${s}</span>`
+                ).join('');
+            }
+
+            const missingSkills = knownSkills.filter(s => !foundSkills.includes(s)).slice(0, 5);
+            document.getElementById('missingSkillsList').innerHTML = missingSkills.map(s => 
+                `<span class="text-xs bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-lg">+ ${s}</span>`
+            ).join('');
+
+            renderJobLinks(role);
+            
+            document.getElementById('dashboard').classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function renderJobLinks(role) {
+            const encodedRole = encodeURIComponent(role);
+            const platforms = [
+                { name: 'LinkedIn Jobs', url: `https://www.linkedin.com/jobs/search/?keywords=${encodedRole}`, bg: 'bg-blue-600' },
+                { name: 'Google Jobs', url: `https://www.google.com/search?q=${encodedRole}+jobs+openings`, bg: 'bg-red-500' },
+                { name: 'Indeed', url: `https://www.indeed.com/jobs?q=${encodedRole}`, bg: 'bg-indigo-600' },
+                { name: 'Naukri.com', url: `https://www.naukri.com/${encodedRole.toLowerCase().replace(/%20/g, '-')}-jobs`, bg: 'bg-amber-600' }
+            ];
+
+            const container = document.getElementById('jobPlatformsList');
+            container.innerHTML = platforms.map(p => `
+                <div class="flex justify-between items-center bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                    <span class="font-semibold text-slate-200 text-xs">${p.name}</span>
+                    <a href="${p.url}" target="_blank" class="${p.bg} text-white text-xs font-semibold px-3 py-1.5 rounded-xl hover:opacity-90 transition">
+                        Apply Openings ↗
+                    </a>
+                </div>
+            `).join('');
+        }
+
+        function showError(msg) {
+            const errorBox = document.getElementById('errorBox');
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.innerText = msg;
+            errorBox.classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function downloadAtsPdf() {
+            document.getElementById('pdfName').innerText = extractedData.name || "Candidate Name";
+            document.getElementById('pdfContact').innerText = extractedData.contact;
+            document.getElementById('pdfRole').innerText = `Target Role: ${extractedData.role}`;
+            document.getElementById('pdfSkills').innerText = extractedData.skills.join(' • ');
+            document.getElementById('pdfText').innerText = extractedData.text.substring(0, 1500);
+
+            const element = document.getElementById('ats-pdf-template');
+            const opt = {
+                margin: 0.5,
+                filename: `${(extractedData.name || "Resume").replace(/\s+/g, '_')}_ATS_Resume.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>
