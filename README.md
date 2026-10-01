@@ -26,6 +26,11 @@ The application operates on a Formatting-First Policy. When a candidate uploads 
                            (Halts & Shows Error)                                                      (Runs ATS Engine & Shows Score)
 
 
+
+
+                           
+
+
 Text Readability Check: Rejects scanned/image-only PDFs with insufficient readable text (< 100 characters).
 
 Contact Structure: Verifies if valid Email or Phone Number formatting exists.
