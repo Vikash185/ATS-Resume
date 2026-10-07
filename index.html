@@ -1,490 +1,1202 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>High Security ATS Formatting Checker</title>
+    <title>ATS Score Engine — Resume Formatting & ATS Checker</title>
+    <meta name="description" content="Free, private ATS resume checker. Validates formatting, scores your resume out of 100, matches it against a job description and builds a truly ATS-parseable PDF — all inside your browser.">
+    <meta name="theme-color" content="#020617">
+    <meta property="og:title" content="ATS Score Engine — Resume Formatting & ATS Checker">
+    <meta property="og:description" content="Formatting-first ATS analysis, job-description matching and an ATS-safe resume builder. 100% in-browser.">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2322d3ee'/%3E%3Cstop offset='1' stop-color='%236366f1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M16 6l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V9z' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M12.5 16l2.5 2.5 4.5-5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- PDF.js Engine -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <!-- Lucide Icons (pinned) -->
+    <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+    <!-- PDF.js (reading PDFs) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- html2pdf -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-</head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen pb-16">
+    <!-- Mammoth (reading DOCX) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" defer></script>
+    <!-- jsPDF (writing real, text-based PDFs) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 
-    <!-- Header -->
-    <header class="max-w-5xl mx-auto pt-10 pb-6 px-6 text-center">
-        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-4">
-            <i data-lucide="shield-check" class="w-4 h-4"></i> Strict Formatting First Verification Engine
+    <style>
+        body {
+            background-color: #020617;
+            background-image:
+                radial-gradient(60rem 30rem at 15% -10%, rgba(56, 189, 248, 0.12), transparent 60%),
+                radial-gradient(50rem 30rem at 95% 0%, rgba(99, 102, 241, 0.14), transparent 60%),
+                radial-gradient(40rem 30rem at 50% 110%, rgba(16, 185, 129, 0.06), transparent 60%);
+            background-attachment: fixed;
+        }
+        .grid-bg {
+            background-image:
+                linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: radial-gradient(ellipse at top, black 30%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse at top, black 30%, transparent 75%);
+        }
+        .glass {
+            background: rgba(15, 23, 42, 0.62);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+        .glow-border { position: relative; }
+        .glow-border::before {
+            content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px;
+            background: linear-gradient(135deg, rgba(34, 211, 238, .55), rgba(99, 102, 241, .35), rgba(16, 185, 129, .35));
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+        }
+        .gradient-text {
+            background: linear-gradient(90deg, #22d3ee, #38bdf8 40%, #818cf8);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .field {
+            width: 100%; margin-top: .375rem; background: rgba(2, 6, 23, .7); border: 1px solid rgb(30 41 59);
+            border-radius: .75rem; padding: .6rem .9rem; font-size: .875rem; color: rgb(226 232 240);
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .field::placeholder { color: rgb(71 85 105); }
+        .field:focus { outline: none; border-color: rgb(99 102 241); box-shadow: 0 0 0 3px rgba(99, 102, 241, .18); }
+        .dropzone.drag { border-color: rgb(34 211 238); background: rgba(34, 211, 238, .06); }
+        .ring-track { transition: stroke-dashoffset 1.2s cubic-bezier(.22, 1, .36, 1); }
+        .bar-fill { transition: width 1s cubic-bezier(.22, 1, .36, 1); }
+        .fade-up { animation: fadeUp .5s ease both; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .paper { font-family: Helvetica, Arial, sans-serif; color: #0f172a; }
+        .paper h4 { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; margin: 12px 0 5px; }
+        .paper .sub { font-weight: 700; font-size: 10.5px; margin-top: 5px; }
+        .paper .bul { font-size: 10px; padding-left: 12px; position: relative; line-height: 1.45; }
+        .paper .bul::before { content: "•"; position: absolute; left: 2px; }
+        .paper p { font-size: 10px; line-height: 1.5; }
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+    </style>
+</head>
+<body class="text-slate-100 font-sans min-h-screen antialiased">
+
+    <div class="grid-bg fixed inset-x-0 top-0 h-[38rem] -z-10 pointer-events-none"></div>
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/70 backdrop-blur-xl">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <a href="#top" class="flex items-center gap-2.5">
+                <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i data-lucide="shield-check" class="w-5 h-5 text-white"></i>
+                </span>
+                <span class="font-display font-extrabold tracking-tight text-lg">ATS<span class="text-cyan-400">Score</span> Engine</span>
+            </a>
+            <div class="hidden md:flex items-center gap-8 text-sm text-slate-400">
+                <a href="#analyze" class="hover:text-white transition">Analyze</a>
+                <a href="#builder" class="hover:text-white transition">Resume Builder</a>
+                <a href="#how" class="hover:text-white transition">How it works</a>
+            </div>
+            <a href="#analyze" class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold bg-white text-slate-900 hover:bg-slate-200 px-4 py-2 rounded-xl transition">
+                Check my resume <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </a>
         </div>
-        <h1 class="text-3xl md:text-5xl font-extrabold bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-500 bg-clip-text text-transparent">
-            ATS Resume Formatting & Score Engine
+    </nav>
+
+    <!-- Hero -->
+    <header id="top" class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-12 text-center">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-6">
+            <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span></span>
+            Formatting-first verification engine
+        </div>
+        <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.05]">
+            Beat the ATS<br class="hidden sm:block"> <span class="gradient-text">before it rejects you.</span>
         </h1>
-        <p class="text-slate-400 mt-2 text-sm max-w-2xl mx-auto">
-            
+        <p class="text-slate-400 mt-5 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+            Upload your resume, paste a job description and get an honest ATS score with a line-by-line action plan.
+            Then build an ATS-safe resume and export a <span class="text-slate-200 font-medium">real text PDF</span> that recruiters' software can actually read.
         </p>
+        <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a href="#analyze" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white font-semibold px-6 py-3 rounded-xl shadow-xl shadow-indigo-600/25 transition">
+                <i data-lucide="scan-line" class="w-5 h-5"></i> Analyze my resume
+            </a>
+            <a href="#builder" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 glass hover:bg-slate-800/70 text-slate-200 font-semibold px-6 py-3 rounded-xl transition">
+                <i data-lucide="file-plus-2" class="w-5 h-5"></i> Build from scratch
+            </a>
+        </div>
+        <div class="mt-12 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
+            <div class="glass rounded-2xl p-4 text-left">
+                <i data-lucide="lock" class="w-5 h-5 text-emerald-400"></i>
+                <p class="mt-2 text-sm font-semibold">100% private</p>
+                <p class="text-xs text-slate-400 mt-0.5">Your resume never leaves the browser</p>
+            </div>
+            <div class="glass rounded-2xl p-4 text-left">
+                <i data-lucide="gauge" class="w-5 h-5 text-cyan-400"></i>
+                <p class="mt-2 text-sm font-semibold">6-factor score</p>
+                <p class="text-xs text-slate-400 mt-0.5">Transparent, weighted breakdown</p>
+            </div>
+            <div class="glass rounded-2xl p-4 text-left">
+                <i data-lucide="target" class="w-5 h-5 text-indigo-400"></i>
+                <p class="mt-2 text-sm font-semibold">JD matching</p>
+                <p class="text-xs text-slate-400 mt-0.5">See the keywords you're missing</p>
+            </div>
+            <div class="glass rounded-2xl p-4 text-left">
+                <i data-lucide="file-type-2" class="w-5 h-5 text-amber-400"></i>
+                <p class="mt-2 text-sm font-semibold">PDF · DOCX · TXT</p>
+                <p class="text-xs text-slate-400 mt-0.5">Upload or paste plain text</p>
+            </div>
+        </div>
     </header>
 
-    <!-- Main Container -->
-    <div class="max-w-4xl mx-auto px-6">
-        
-        <!-- Action Options -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            
-            <!-- Upload Panel -->
-            <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center shadow-xl">
-                <div class="w-12 h-12 mx-auto bg-indigo-600/10 rounded-2xl flex items-center justify-center text-indigo-400 mb-3">
-                    <i data-lucide="upload-cloud" class="w-6 h-6"></i>
-                </div>
-                <h3 class="text-base font-semibold text-slate-200">Upload Existing Resume</h3>
-                <p class="text-xs text-slate-400 mb-4 mt-1">Upload PDF (Max 5MB) for Formatting Check</p>
-                
-                <input type="file" id="resumeInput" accept="application/pdf" class="hidden" onchange="handleResumeUpload(event)">
-                <label for="resumeInput" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer transition">
-                    <i data-lucide="file-text" class="w-4 h-4"></i> Select PDF File
-                </label>
-                
-                <!-- Formatting Failure / Alert Box -->
-                <div id="errorBox" class="hidden mt-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-left">
-                    <p id="errorTitle" class="text-rose-400 font-bold text-xs flex items-center gap-1.5">
-                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> Formatting Check Failed
-                    </p>
-                    <p id="errorMsg" class="text-slate-300 text-xs mt-1 leading-relaxed"></p>
-                </div>
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 pb-20 space-y-20">
 
-                <p id="loadingText" class="hidden text-indigo-400 mt-3 text-xs animate-pulse">Checking Layout, Structure & Formatting...</p>
+        <!-- ============ ANALYZER ============ -->
+        <section id="analyze" class="scroll-mt-24">
+            <div class="mb-6">
+                <p class="text-xs font-semibold tracking-widest text-cyan-400 uppercase">Step 1 · Analyze</p>
+                <h2 class="font-display text-2xl sm:text-3xl font-bold mt-1">Upload your resume</h2>
             </div>
 
-            <!-- Builder Form Panel -->
-            <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center shadow-xl">
-                <div class="w-12 h-12 mx-auto bg-emerald-600/10 rounded-2xl flex items-center justify-center text-emerald-400 mb-3">
-                    <i data-lucide="file-plus" class="w-6 h-6"></i>
-                </div>
-                <h3 class="text-base font-semibold text-slate-200">Create Properly Formatted Resume</h3>
-                <p class="text-xs text-slate-400 mb-4 mt-1">Direct Perfect Format Resume Banayein</p>
-                
-                <button onclick="toggleForm()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition">
-                    <i data-lucide="edit-3" class="w-4 h-4"></i> Create Resume Form
-                </button>
-            </div>
-
-        </div>
-
-        <!-- Section: Create Resume Form -->
-        <div id="createFormSection" class="hidden bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl mb-12">
-            <h2 class="text-lg font-bold text-slate-100 mb-6 flex items-center gap-2 border-b border-slate-800 pb-3">
-                <i data-lucide="user-check" class="w-5 h-5 text-emerald-400"></i> Enter Details for Perfect ATS Format
-            </h2>
-
-            <form id="resumeForm" onsubmit="generateCustomResume(event)" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-xs font-semibold text-slate-300">Full Name *</label>
-                        <input type="text" id="fullName" required placeholder="e.g. Rahul Sharma" class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
+                <!-- Resume input -->
+                <div class="lg:col-span-3 glass rounded-3xl p-5 sm:p-6">
+                    <div class="flex items-center gap-1 p-1 rounded-xl bg-slate-950/70 border border-slate-800 w-fit text-xs font-semibold">
+                        <button data-tab="upload" class="tab-btn px-3.5 py-1.5 rounded-lg bg-slate-800 text-white transition">Upload file</button>
+                        <button data-tab="paste" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Paste text</button>
                     </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-300">Target Job Role *</label>
-                        <input type="text" id="jobRole" required placeholder="e.g. Frontend Developer" class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-                    </div>
-                </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-xs font-semibold text-slate-300">Email Address *</label>
-                        <input type="email" id="email" required placeholder="rahul@example.com" class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-300">Phone Number *</label>
-                        <input type="tel" id="phone" required placeholder="+91 9876543210" class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="text-xs font-semibold text-slate-300">Technical Skills (Comma Separated) *</label>
-                    <input type="text" id="skillsInput" required placeholder="JavaScript, React, Node.js, SQL, Git" class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-                </div>
-
-                <div>
-                    <label class="text-xs font-semibold text-slate-300">Work Experience / Key Projects *</label>
-                    <textarea id="experienceInput" rows="3" required placeholder="Developed web application using React. Reduced loading time by 20%." class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
-                </div>
-
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-3 rounded-xl transition mt-4">
-                    Generate Verified Resume & Analyze Score
-                </button>
-            </form>
-        </div>
-
-        <!-- Dashboard Output (Formatting Breakdown + ATS Score) -->
-        <div id="dashboard" class="hidden space-y-8">
-            
-            <!-- Top Section: Formatting Health Checklist -->
-            <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
-                <h3 class="text-base font-bold text-slate-200 flex items-center gap-2 mb-4 border-b border-slate-800 pb-3">
-                    <i data-lucide="layout-template" class="w-5 h-5 text-indigo-400"></i> Resume Formatting Checklist (Passed)
-                </h3>
-                <div id="formatChecklist" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Formatting results injected here -->
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                
-                <!-- Left: Verified Score -->
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-col justify-between">
-                    <div>
-                        <div class="flex justify-between items-center border-b border-slate-800 pb-4">
-                            <h2 class="text-lg font-bold text-slate-200 flex items-center gap-2">
-                                <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i> Final ATS Score
-                            </h2>
-                            <span id="scoreBadge" class="text-2xl font-black px-4 py-1 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                0/100
+                    <div id="tab-upload" class="mt-4">
+                        <label id="dropzone" for="resumeInput" class="dropzone flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl px-6 py-10 cursor-pointer transition">
+                            <span class="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-300 flex items-center justify-center mb-3">
+                                <i data-lucide="upload-cloud" class="w-7 h-7"></i>
                             </span>
-                        </div>
-
-                        <div class="mt-6">
-                            <p class="text-xs text-slate-400 uppercase font-semibold">Detected Job Profile</p>
-                            <p id="targetRole" class="text-xl font-bold text-cyan-400 mt-1">Not Detected</p>
-                        </div>
-
-                        <div class="mt-6">
-                            <p class="text-xs text-slate-400 uppercase font-semibold">Matched Technical Skills</p>
-                            <div id="skillsList" class="flex flex-wrap gap-2 mt-2"></div>
-                        </div>
-
-                        <div class="mt-6">
-                            <p class="text-xs text-amber-400 uppercase font-semibold">Suggested Missing Keywords</p>
-                            <div id="missingSkillsList" class="flex flex-wrap gap-2 mt-2"></div>
+                            <span class="text-sm font-semibold text-slate-200">Drop your resume here, or <span class="text-cyan-400 underline underline-offset-4">browse</span></span>
+                            <span class="text-xs text-slate-500 mt-1">PDF, DOCX or TXT · max 5 MB · processed locally</span>
+                        </label>
+                        <input type="file" id="resumeInput" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" class="hidden">
+                        <div id="fileChip" class="hidden mt-3 flex items-center justify-between gap-3 bg-slate-950/70 border border-slate-800 rounded-xl px-3.5 py-2.5">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <i data-lucide="file-text" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+                                <span id="fileName" class="text-xs font-medium text-slate-200 truncate"></span>
+                                <span id="fileMeta" class="text-[11px] text-slate-500 shrink-0"></span>
+                            </div>
+                            <button id="clearFileBtn" class="text-slate-500 hover:text-rose-400 transition" title="Remove file"><i data-lucide="x" class="w-4 h-4"></i></button>
                         </div>
                     </div>
 
-                    <button onclick="downloadAtsPdf()" class="w-full mt-8 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition">
-                        <i data-lucide="download" class="w-5 h-5"></i> Download ATS Compliant PDF
-                    </button>
+                    <div id="tab-paste" class="hidden mt-4">
+                        <textarea id="pasteInput" rows="9" class="field font-mono text-xs leading-relaxed" placeholder="Paste the full text of your resume here…"></textarea>
+                    </div>
                 </div>
 
-                <!-- Right: Job Portals -->
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
-                    <h2 class="text-lg font-bold text-slate-200 flex items-center gap-2 mb-1">
-                        <i data-lucide="briefcase" class="w-5 h-5 text-teal-400"></i> Direct Job Openings
-                    </h2>
-                    <p class="text-xs text-slate-400 mb-6">Openings matching: <strong id="jobRoleLabel" class="text-slate-200">Software Engineer</strong></p>
-
-                    <div id="jobPlatformsList" class="space-y-3"></div>
+                <!-- Job description -->
+                <div class="lg:col-span-2 glass rounded-3xl p-5 sm:p-6 flex flex-col">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold flex items-center gap-2"><i data-lucide="target" class="w-4 h-4 text-indigo-400"></i> Job description <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-800/80 px-2 py-0.5 rounded-md">Optional</span></h3>
+                        <span id="jdCount" class="text-[11px] text-slate-500">0 words</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Paste the posting to get a keyword match score tailored to that exact job.</p>
+                    <textarea id="jdInput" class="field flex-1 min-h-[9rem] text-xs leading-relaxed" placeholder="e.g. We are looking for a Frontend Developer with 2+ years of experience in React, TypeScript, REST APIs…"></textarea>
                 </div>
-
             </div>
 
+            <div class="mt-5 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                <p class="text-xs text-slate-500 flex items-center gap-1.5"><i data-lucide="shield" class="w-3.5 h-3.5"></i> Nothing is uploaded to a server — parsing and scoring run on your device.</p>
+                <button id="analyzeBtn" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-6 py-3 rounded-xl shadow-lg shadow-indigo-600/25 transition">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> Run ATS analysis
+                </button>
+            </div>
+
+            <!-- Pipeline -->
+            <div id="pipelineCard" class="hidden mt-8 glass rounded-3xl p-5 sm:p-6 fade-up">
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-sm font-semibold flex items-center gap-2"><i data-lucide="workflow" class="w-4 h-4 text-cyan-400"></i> Formatting gatekeeper</h3>
+                    <span id="pipelineStatus" class="text-xs text-slate-400"></span>
+                </div>
+                <ol id="pipeline" class="grid grid-cols-1 sm:grid-cols-5 gap-3"></ol>
+                <div id="gateError" class="hidden mt-5 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/25">
+                    <p class="text-rose-300 font-semibold text-sm flex items-center gap-2"><i data-lucide="octagon-alert" class="w-4 h-4"></i> <span id="gateErrorTitle">Formatting check failed</span></p>
+                    <p id="gateErrorMsg" class="text-slate-300 text-sm mt-1.5 leading-relaxed"></p>
+                    <ul id="gateErrorTips" class="mt-3 space-y-1.5 text-xs text-slate-400"></ul>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="hidden mt-8 space-y-5"></div>
+        </section>
+
+        <!-- ============ BUILDER ============ -->
+        <section id="builder" class="scroll-mt-24">
+            <div class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                <div>
+                    <p class="text-xs font-semibold tracking-widest text-emerald-400 uppercase">Step 2 · Build</p>
+                    <h2 class="font-display text-2xl sm:text-3xl font-bold mt-1">ATS-safe resume builder</h2>
+                    <p class="text-sm text-slate-400 mt-1">Single column, standard headings, real selectable text. Drafts save automatically in this browser.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button id="sampleBtn" class="inline-flex items-center gap-1.5 text-xs font-semibold glass hover:bg-slate-800/70 px-3.5 py-2 rounded-xl transition"><i data-lucide="wand-2" class="w-3.5 h-3.5"></i> Load sample</button>
+                    <button id="resetBtn" class="inline-flex items-center gap-1.5 text-xs font-semibold glass hover:bg-slate-800/70 px-3.5 py-2 rounded-xl transition"><i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Clear</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <form id="resumeForm" class="glass rounded-3xl p-5 sm:p-6 space-y-4" autocomplete="on">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <label class="block text-xs font-semibold text-slate-300">Full name *<input name="fullName" required class="field" placeholder="Rahul Sharma"></label>
+                        <label class="block text-xs font-semibold text-slate-300">Target job role *<input name="jobRole" required class="field" placeholder="Frontend Developer"></label>
+                        <label class="block text-xs font-semibold text-slate-300">Email *<input name="email" type="email" required class="field" placeholder="rahul@example.com"></label>
+                        <label class="block text-xs font-semibold text-slate-300">Phone *<input name="phone" type="tel" required class="field" placeholder="+91 98765 43210"></label>
+                        <label class="block text-xs font-semibold text-slate-300">Location<input name="location" class="field" placeholder="Bengaluru, India"></label>
+                        <label class="block text-xs font-semibold text-slate-300">LinkedIn<input name="linkedin" class="field" placeholder="linkedin.com/in/rahulsharma"></label>
+                    </div>
+                    <label class="block text-xs font-semibold text-slate-300">GitHub / Portfolio<input name="website" class="field" placeholder="github.com/rahulsharma"></label>
+                    <label class="block text-xs font-semibold text-slate-300">Professional summary<textarea name="summary" rows="3" class="field" placeholder="Frontend developer with 2+ years of experience building fast, accessible React apps…"></textarea></label>
+                    <label class="block text-xs font-semibold text-slate-300">Technical skills *<span class="font-normal text-slate-500"> — one group per line</span><textarea name="skills" rows="3" required class="field font-mono text-xs" placeholder="Languages: JavaScript, TypeScript, SQL&#10;Frameworks: React, Next.js, Node.js, Tailwind CSS&#10;Tools: Git, Docker, AWS, Jest"></textarea></label>
+                    <label class="block text-xs font-semibold text-slate-300">Work experience *<span class="font-normal text-slate-500"> — start bullet lines with “-”</span><textarea name="experience" rows="6" required class="field font-mono text-xs" placeholder="Frontend Developer — Acme Corp | Jun 2023 – Present&#10;- Built a React dashboard used by 2,000+ users, cutting report time by 40%&#10;- Reduced bundle size by 35% with code-splitting and lazy loading"></textarea></label>
+                    <label class="block text-xs font-semibold text-slate-300">Projects<textarea name="projects" rows="4" class="field font-mono text-xs" placeholder="ShopEase — E-commerce platform | React, Node.js, MongoDB&#10;- Implemented JWT auth and Razorpay checkout for 500+ test orders"></textarea></label>
+                    <label class="block text-xs font-semibold text-slate-300">Education *<textarea name="education" rows="2" required class="field font-mono text-xs" placeholder="B.Tech, Computer Science — XYZ Institute of Technology | 2019 – 2023 | CGPA 8.4"></textarea></label>
+                    <label class="block text-xs font-semibold text-slate-300">Certifications & achievements<textarea name="certifications" rows="2" class="field font-mono text-xs" placeholder="- AWS Certified Cloud Practitioner (2024)&#10;- Winner, Smart India Hackathon 2022"></textarea></label>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        <button type="submit" class="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold py-3 rounded-xl transition">
+                            <i data-lucide="scan-line" class="w-4 h-4"></i> Analyze this resume
+                        </button>
+                        <button type="button" id="exportBtn" class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold py-3 rounded-xl shadow-lg shadow-emerald-600/20 transition">
+                            <i data-lucide="download" class="w-4 h-4"></i> Download ATS PDF
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Live preview -->
+                <div class="lg:sticky lg:top-24 h-fit">
+                    <div class="flex items-center justify-between mb-2 px-1">
+                        <p class="text-xs font-semibold text-slate-400 flex items-center gap-1.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i> Live preview</p>
+                        <p id="draftStatus" class="text-[11px] text-slate-500"></p>
+                    </div>
+                    <div class="rounded-2xl bg-white shadow-2xl shadow-black/40 overflow-hidden">
+                        <div id="preview" class="paper p-7 sm:p-9 min-h-[34rem] max-h-[44rem] overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ HOW IT WORKS ============ -->
+        <section id="how" class="scroll-mt-24">
+            <div class="mb-6">
+                <p class="text-xs font-semibold tracking-widest text-indigo-400 uppercase">Under the hood</p>
+                <h2 class="font-display text-2xl sm:text-3xl font-bold mt-1">How the scoring works</h2>
+                <p class="text-sm text-slate-400 mt-1 max-w-2xl">Formatting is checked first. If a resume can't be parsed reliably, an ATS score would be meaningless — so the engine stops and tells you exactly what to fix.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass rounded-2xl p-5">
+                    <p class="text-xs font-semibold text-cyan-400">01 · Gatekeeper</p>
+                    <p class="font-semibold mt-1">Formatting must pass</p>
+                    <ul class="text-sm text-slate-400 mt-3 space-y-2">
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i> At least 100 characters of real, selectable text (rejects scanned images)</li>
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i> A valid email or phone number</li>
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i> At least 2 of: Experience, Education, Skills, Projects</li>
+                    </ul>
+                </div>
+                <div class="glass rounded-2xl p-5 md:col-span-2">
+                    <p class="text-xs font-semibold text-indigo-400">02 · ATS score (100 points)</p>
+                    <p class="font-semibold mt-1">Six transparent factors</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 mt-3 text-sm">
+                        <div class="flex justify-between border-b border-slate-800 pb-2"><span class="text-slate-300">Section structure</span><span class="text-slate-500">25</span></div>
+                        <div class="flex justify-between border-b border-slate-800 pb-2"><span class="text-slate-300">Keywords & skills / JD match</span><span class="text-slate-500">20</span></div>
+                        <div class="flex justify-between border-b border-slate-800 pb-2"><span class="text-slate-300">Quantified impact</span><span class="text-slate-500">15</span></div>
+                        <div class="flex justify-between border-b border-slate-800 pb-2"><span class="text-slate-300">Action-oriented language</span><span class="text-slate-500">15</span></div>
+                        <div class="flex justify-between border-b border-slate-800 pb-2"><span class="text-slate-300">Length & readability</span><span class="text-slate-500">15</span></div>
+                        <div class="flex justify-between border-b border-slate-800 pb-2"><span class="text-slate-300">Contact completeness</span><span class="text-slate-500">10</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="border-t border-slate-800/70">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <p class="flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4 text-cyan-400"></i> ATS Score Engine · Open source under the MIT License</p>
+            <p>Scores are heuristic guidance, not a guarantee from any specific ATS vendor.</p>
         </div>
+    </footer>
 
-    </div>
-
-    <!-- Hidden Printable Template -->
-    <div class="hidden">
-        <div id="ats-pdf-template" class="p-8 bg-white text-slate-900 font-sans">
-            <h1 id="pdfName" class="text-2xl font-bold uppercase text-slate-900">Candidate Name</h1>
-            <p id="pdfContact" class="text-xs text-slate-600 border-b-2 border-slate-900 pb-2 mb-4">email@example.com | +91 0000000000</p>
-            
-            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Target Profile</h2>
-            <p id="pdfRole" class="text-xs text-slate-700 mt-1 font-semibold">Role: Software Engineer</p>
-
-            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mt-4">Technical Competencies</h2>
-            <p id="pdfSkills" class="text-xs text-slate-800 mt-1"></p>
-
-            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mt-4 border-t border-slate-200 pt-2">Professional Summary & Details</h2>
-            <p id="pdfText" class="text-xs text-slate-700 mt-2 whitespace-pre-line leading-relaxed"></p>
-        </div>
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 hidden">
+        <div class="glass rounded-xl px-4 py-2.5 text-sm text-slate-100 shadow-2xl flex items-center gap-2"><i data-lucide="info" class="w-4 h-4 text-cyan-400"></i><span id="toastMsg"></span></div>
     </div>
 
     <script>
+    /* =========================================================
+       ATS Score Engine — all parsing & scoring runs client-side
+       ========================================================= */
+
+    if (window.pdfjsLib) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
 
-        let extractedData = { name: '', contact: '', text: '', skills: [], role: '' };
+    const $ = (id) => document.getElementById(id);
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const refreshIcons = () => window.lucide && lucide.createIcons();
+    const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
-        const knownSkills = [
-            'JavaScript', 'React', 'Node.js', 'Python', 'Java', 'C++', 'SQL', 'MongoDB',
-            'AWS', 'Docker', 'Git', 'HTML', 'CSS', 'Tailwind', 'TypeScript', 'Express',
-            'REST API', 'GraphQL', 'Data Analysis', 'Project Management', 'Communication'
-        ];
+    const state = { doc: null, analysis: null, inputMode: 'upload' };
 
-        const requiredSections = [
-            { name: 'Work Experience', keywords: ['experience', 'work history', 'employment'] },
-            { name: 'Education', keywords: ['education', 'qualification', 'academic'] },
-            { name: 'Skills', keywords: ['skills', 'technical skills', 'competencies'] },
-            { name: 'Projects', keywords: ['projects', 'key projects'] }
-        ];
+    /* ---------------- Knowledge base ---------------- */
 
-        function toggleForm() {
-            document.getElementById('createFormSection').classList.toggle('hidden');
+    const SKILL_GROUPS = {
+        'Languages': ['JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'C', 'Go', 'Rust', 'Kotlin', 'Swift', 'PHP', 'Ruby', 'SQL', 'Dart', 'Scala'],
+        'Frontend': ['React', 'Next.js', 'Angular', 'Vue.js', 'Redux', 'HTML', 'CSS', 'Tailwind CSS', 'Bootstrap', 'SASS', 'Webpack', 'Vite', 'jQuery'],
+        'Backend': ['Node.js', 'Express', 'Django', 'Flask', 'FastAPI', 'Spring Boot', '.NET', 'REST API', 'GraphQL', 'Microservices', 'Laravel'],
+        'Data & AI': ['Machine Learning', 'Deep Learning', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy', 'Scikit-learn', 'Power BI', 'Tableau', 'Excel', 'Data Analysis', 'Statistics', 'NLP', 'LLM', 'Spark'],
+        'Databases': ['MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Firebase', 'Oracle', 'DynamoDB', 'Elasticsearch'],
+        'Cloud & DevOps': ['AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'CI/CD', 'Jenkins', 'Terraform', 'Linux', 'Git', 'GitHub Actions', 'Nginx'],
+        'Mobile': ['React Native', 'Flutter', 'Android', 'iOS'],
+        'Testing': ['Jest', 'Selenium', 'Cypress', 'Playwright', 'Unit Testing'],
+        'Design': ['Figma', 'Adobe XD', 'Photoshop', 'UI/UX', 'Wireframing', 'Prototyping'],
+        'Practices': ['Agile', 'Scrum', 'Jira', 'System Design', 'Data Structures', 'Algorithms', 'OOP'],
+        'Soft skills': ['Leadership', 'Communication', 'Problem Solving', 'Teamwork', 'Project Management', 'Stakeholder Management', 'Mentoring']
+    };
+
+    const SKILL_ALIASES = {
+        'JavaScript': ['javascript', 'js', 'es6'], 'TypeScript': ['typescript'], 'C++': ['c++', 'cpp'], 'C#': ['c#', 'csharp'],
+        'C': ['c programming', 'c language'], 'Go': ['golang', 'go lang'], 'Node.js': ['node.js', 'nodejs', 'node js'],
+        'Next.js': ['next.js', 'nextjs'], 'Vue.js': ['vue.js', 'vuejs', 'vue'], 'Tailwind CSS': ['tailwind'],
+        'HTML': ['html', 'html5'], 'CSS': ['css', 'css3'], 'SASS': ['sass', 'scss'], 'Express': ['express.js', 'expressjs', 'express'],
+        '.NET': ['.net', 'dotnet', 'asp.net'], 'Spring Boot': ['spring boot', 'springboot'], 'REST API': ['rest api', 'rest apis', 'restful'],
+        'Machine Learning': ['machine learning', 'ml'], 'Scikit-learn': ['scikit-learn', 'sklearn', 'scikit learn'],
+        'Power BI': ['power bi', 'powerbi'], 'NLP': ['nlp', 'natural language processing'], 'LLM': ['llm', 'llms', 'large language model', 'large language models', 'genai', 'generative ai'],
+        'Spark': ['apache spark', 'pyspark'], 'PostgreSQL': ['postgresql', 'postgres'], 'AWS': ['aws', 'amazon web services'],
+        'GCP': ['gcp', 'google cloud'], 'Kubernetes': ['kubernetes', 'k8s'], 'CI/CD': ['ci/cd', 'ci cd', 'continuous integration'],
+        'UI/UX': ['ui/ux', 'ux design', 'ui design', 'user experience'], 'OOP': ['oop', 'oops', 'object oriented', 'object-oriented'],
+        'Data Structures': ['data structures', 'dsa'], 'Problem Solving': ['problem solving', 'problem-solving'],
+        'Teamwork': ['teamwork', 'team player', 'cross-functional'], 'Excel': ['ms excel', 'advanced excel', 'excel'],
+        'Unit Testing': ['unit testing', 'unit tests', 'tdd'], 'GitHub Actions': ['github actions']
+    };
+
+    const SKILLS = Object.entries(SKILL_GROUPS).flatMap(([group, names]) => names.map(name => {
+        const aliases = SKILL_ALIASES[name] || [name.toLowerCase()];
+        const pattern = aliases.map(a => reEsc(a.toLowerCase())).join('|');
+        return { name, group, re: new RegExp(`(?<![a-z0-9+#./])(?:${pattern})(?![a-z0-9+#])`, 'i') };
+    }));
+    const SKILL_BY_NAME = Object.fromEntries(SKILLS.map(s => [s.name, s]));
+
+    const ROLES = [
+        { title: 'Frontend Developer', match: ['frontend', 'front-end', 'front end', 'react', 'angular', 'vue', 'ui developer'], core: ['JavaScript', 'TypeScript', 'React', 'HTML', 'CSS', 'Tailwind CSS', 'Redux', 'Next.js', 'Git', 'REST API', 'Jest'] },
+        { title: 'Backend Developer', match: ['backend', 'back-end', 'back end', 'django', 'spring boot', 'microservices', 'api development'], core: ['Node.js', 'Express', 'Python', 'Java', 'SQL', 'PostgreSQL', 'MongoDB', 'REST API', 'Docker', 'Redis', 'Microservices', 'Git'] },
+        { title: 'Full Stack Developer', match: ['full stack', 'fullstack', 'full-stack', 'mern', 'mean stack'], core: ['JavaScript', 'TypeScript', 'React', 'Node.js', 'Express', 'MongoDB', 'SQL', 'REST API', 'Docker', 'Git', 'AWS', 'CI/CD'] },
+        { title: 'Data Analyst', match: ['data analyst', 'analytics', 'power bi', 'tableau', 'dashboards', 'business intelligence'], core: ['SQL', 'Python', 'Excel', 'Power BI', 'Tableau', 'Pandas', 'Statistics', 'Data Analysis', 'NumPy'] },
+        { title: 'Data Scientist', match: ['data scientist', 'data science', 'predictive model', 'statistical model'], core: ['Python', 'SQL', 'Machine Learning', 'Statistics', 'Pandas', 'NumPy', 'Scikit-learn', 'TensorFlow', 'Deep Learning', 'Spark'] },
+        { title: 'Machine Learning Engineer', match: ['machine learning engineer', 'ml engineer', 'ai engineer', 'deep learning', 'pytorch', 'tensorflow', 'llm'], core: ['Python', 'Machine Learning', 'Deep Learning', 'PyTorch', 'TensorFlow', 'Scikit-learn', 'NLP', 'LLM', 'Docker', 'AWS', 'SQL'] },
+        { title: 'DevOps Engineer', match: ['devops', 'site reliability', 'sre', 'kubernetes', 'terraform', 'ci/cd', 'infrastructure'], core: ['AWS', 'Docker', 'Kubernetes', 'CI/CD', 'Terraform', 'Linux', 'Jenkins', 'GitHub Actions', 'Git', 'Nginx'] },
+        { title: 'Mobile App Developer', match: ['android', 'ios', 'flutter', 'react native', 'mobile app'], core: ['Flutter', 'Dart', 'React Native', 'Kotlin', 'Swift', 'Android', 'iOS', 'Firebase', 'Git', 'REST API'] },
+        { title: 'UI/UX Designer', match: ['ui/ux', 'ux designer', 'ui designer', 'product designer', 'figma', 'wireframe', 'user research'], core: ['Figma', 'UI/UX', 'Wireframing', 'Prototyping', 'Adobe XD', 'HTML', 'CSS'] },
+        { title: 'QA / Test Engineer', match: ['qa', 'quality assurance', 'test engineer', 'automation testing', 'selenium', 'test cases'], core: ['Selenium', 'Cypress', 'Playwright', 'Jest', 'Unit Testing', 'Java', 'Python', 'Jira', 'Agile'] },
+        { title: 'Product Manager', match: ['product manager', 'product management', 'roadmap', 'product strategy', 'go-to-market'], core: ['Agile', 'Scrum', 'Jira', 'Stakeholder Management', 'Data Analysis', 'Communication', 'Leadership', 'Figma'] }
+    ];
+    const DEFAULT_ROLE = { title: 'Software Engineer', core: ['Data Structures', 'Algorithms', 'System Design', 'OOP', 'Git', 'SQL', 'Python', 'Java', 'JavaScript', 'Docker', 'AWS', 'Agile'] };
+
+    const SECTIONS = [
+        { key: 'summary', name: 'Summary', weight: 3, core: false, heading: /^(professional |career )?(summary|profile|objective)\b|^about me\b/, loose: /\b(summary|objective|profile)\b/ },
+        { key: 'experience', name: 'Work Experience', weight: 8, core: true, heading: /^(work |professional |relevant )?(experience|employment( history)?|work history|internships?)\b/, loose: /\b(experience|employment|work history|internship)\b/ },
+        { key: 'education', name: 'Education', weight: 6, core: true, heading: /^(education|academics?|academic (background|qualifications?)|qualifications?)\b/, loose: /\b(education|university|college|b\.?\s?tech|bachelor|master'?s?|degree)\b/ },
+        { key: 'skills', name: 'Skills', weight: 5, core: true, heading: /^(technical |key |core )?(skills|competencies|technologies|tech stack)\b/, loose: /\bskills?\b/ },
+        { key: 'projects', name: 'Projects', weight: 3, core: true, heading: /^(key |academic |personal |selected )?projects?\b/, loose: /\bprojects?\b/ },
+        { key: 'certifications', name: 'Certifications', weight: 0, core: false, heading: /^(certifications?|licenses|achievements|awards|honou?rs|accomplishments)\b/, loose: /\b(certifi|achievement|award)/ }
+    ];
+
+    const ACTION_VERBS = 'accelerated achieved analyzed architected automated boosted built collaborated configured coordinated created cut debugged decreased delivered deployed designed developed directed drove eliminated enabled engineered enhanced established executed expanded generated grew implemented improved increased initiated integrated introduced launched led maintained managed mentored migrated modernized monitored negotiated optimized orchestrated organized owned pioneered presented prototyped published raised redesigned reduced refactored resolved revamped saved scaled secured shipped simplified spearheaded standardized streamlined strengthened tested trained transformed tripled doubled upgraded won wrote'.split(' ');
+    const ACTION_SET = new Set(ACTION_VERBS);
+
+    const WEAK_PHRASES = [
+        { phrase: 'responsible for', fix: 'Led / Owned / Managed' },
+        { phrase: 'worked on', fix: 'Built / Developed / Delivered' },
+        { phrase: 'helped', fix: 'Enabled / Drove / Supported' },
+        { phrase: 'assisted', fix: 'Partnered with / Supported' },
+        { phrase: 'involved in', fix: 'Contributed to / Drove' },
+        { phrase: 'participated in', fix: 'Contributed to / Delivered' },
+        { phrase: 'duties included', fix: 'Delivered / Executed' },
+        { phrase: 'tasked with', fix: 'Owned / Led' },
+        { phrase: 'familiar with', fix: 'List it under Skills instead' },
+        { phrase: 'hard working', fix: 'Show it with a measurable result' },
+        { phrase: 'hardworking', fix: 'Show it with a measurable result' },
+        { phrase: 'go-getter', fix: 'Show it with a measurable result' }
+    ];
+
+    const STOPWORDS = new Set(('a an and are as at be by for from has have in is it its of on or that the to was were will with you your we our us they this these those their them he she his her who whom which what when where why how all any both each few more most other some such no nor not only own same so than too very can just should now also may must able ability about above across after again against into over under within without per via etc including include includes ' +
+        'experience experienced work working team teams strong good great excellent knowledge understanding years year role roles job jobs candidate candidates company responsibilities responsibility requirements required requirement preferred plus skills skill using use used new well environment environments opportunity looking join based like need needs position applicants apply employer benefits salary location remote hybrid office full time part degree bachelor bachelors master related field minimum least similar equivalent highly ideal ensure ensuring across while along being other others would could within help helping make making build building develop developing proven solid hands-on hands deep closely drive day days part-time full-time').split(' '));
+
+    /* ---------------- Document extraction ---------------- */
+
+    async function extractDocument(file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (ext === 'pdf') return extractPdf(file);
+        if (ext === 'docx') {
+            if (!window.mammoth) throw new Error('DOCX parser failed to load. Check your internet connection.');
+            const { value } = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+            return { lines: value.split(/\r?\n/), pages: null, source: 'DOCX', fileName: file.name };
+        }
+        const text = await file.text();
+        return { lines: text.split(/\r?\n/), pages: null, source: 'TXT', fileName: file.name };
+    }
+
+    async function extractPdf(file) {
+        if (!window.pdfjsLib) throw new Error('PDF engine failed to load. Check your internet connection.');
+        const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+        const lines = [];
+        for (let p = 1; p <= pdf.numPages; p++) {
+            const content = await (await pdf.getPage(p)).getTextContent();
+            let cur = '', lastY = null, lastEnd = null;
+            for (const it of content.items) {
+                if (typeof it.str !== 'string') continue;
+                const x = it.transform[4], y = it.transform[5];
+                if (lastY !== null && Math.abs(y - lastY) > 2) { lines.push(cur); cur = ''; lastEnd = null; }
+                if (cur && lastEnd !== null && x - lastEnd > 1.5 && !cur.endsWith(' ') && !it.str.startsWith(' ')) cur += ' ';
+                cur += it.str;
+                lastY = y; lastEnd = x + (it.width || 0);
+                if (it.hasEOL) { lines.push(cur); cur = ''; lastY = null; lastEnd = null; }
+            }
+            if (cur) lines.push(cur);
+        }
+        return { lines, pages: pdf.numPages, source: 'PDF', fileName: file.name };
+    }
+
+    /* ---------------- Analysis engine ---------------- */
+
+    function headingText(line) {
+        const t = line.toLowerCase().replace(/^[^a-z]+/, '').replace(/[\s:\-–—|•]+$/, '').trim();
+        return t && t.length <= 40 && t.split(/\s+/).length <= 5 ? t : null;
+    }
+
+    function sectionOf(line) {
+        const t = headingText(line);
+        return t ? SECTIONS.find(s => s.heading.test(t)) || null : null;
+    }
+
+    function findPhone(text) {
+        const re = /(?:\+?\d{1,3}[\s.-]?)?\(?\d{2,5}\)?[\s.-]?\d{3,5}[\s.-]?\d{3,5}/g;
+        for (const m of text.matchAll(re)) {
+            const digits = m[0].replace(/\D/g, '').length;
+            if (digits >= 10 && digits <= 13) return m[0].trim();
+        }
+        return '';
+    }
+
+    function guessName(lines, fileName) {
+        for (const l of lines.slice(0, 4)) {
+            const t = l.trim();
+            const words = t.split(/\s+/);
+            if (/^[A-Za-z][A-Za-z .'-]{2,40}$/.test(t) && words.length >= 2 && words.length <= 4 && !sectionOf(t) && !/resume|curriculum|vitae/i.test(t)) {
+                return t.replace(/\b([a-z])/g, c => c.toUpperCase()).replace(/\B([A-Z]+)/g, c => c.toLowerCase());
+            }
+        }
+        return (fileName || '').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').replace(/\bresume\b|\bcv\b/ig, '').trim() || 'Candidate';
+    }
+
+    function detectRole(lower, foundNames) {
+        let best = null, bestScore = 0;
+        for (const role of ROLES) {
+            let score = 0;
+            for (const term of role.match) {
+                const hits = lower.match(new RegExp(`(?<![a-z0-9])${reEsc(term)}(?![a-z0-9])`, 'g'));
+                if (hits) score += Math.min(hits.length, 4);
+            }
+            if (lower.includes(role.title.toLowerCase())) score += 6;
+            score += role.core.filter(c => foundNames.has(c)).length * 0.5;
+            if (score > bestScore) { bestScore = score; best = role; }
+        }
+        return bestScore >= 3 ? best : DEFAULT_ROLE;
+    }
+
+    function extractJdKeywords(jd) {
+        const lower = jd.toLowerCase();
+        const skills = SKILLS.filter(s => s.re.test(lower)).map(s => ({ term: s.name, skill: s }));
+        const skillWords = new Set(skills.flatMap(s => s.term.toLowerCase().split(/\s+/)));
+        const freq = {};
+        for (let w of lower.match(/[a-z][a-z+#.\-]{3,}/g) || []) {
+            w = w.replace(/[.\-]+$/, '');
+            if (w.length < 4 || STOPWORDS.has(w) || skillWords.has(w)) continue;
+            freq[w] = (freq[w] || 0) + 1;
+        }
+        const terms = Object.entries(freq).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([w]) => ({ term: w, skill: null }));
+        return [...skills, ...terms];
+    }
+
+    function analyze(doc, jdText) {
+        const lines = doc.lines.map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+        const text = lines.join('\n');
+        const lower = text.toLowerCase();
+        const words = text.split(/\s+/).filter(w => /[a-z0-9]/i.test(w)).length;
+        const pages = doc.pages || Math.max(1, Math.ceil(words / 550));
+
+        // Contact
+        const email = (text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i) || [])[0] || '';
+        const phone = findPhone(text);
+        const linkedin = (text.match(/linkedin\.com\/in\/[a-z0-9_%-]+/i) || [])[0] || '';
+        const website = (text.match(/(?:github\.com\/[a-z0-9_-]+|[a-z0-9-]+\.(?:vercel|netlify)\.app|behance\.net\/[a-z0-9_-]+|[a-z0-9-]+\.(?:dev|io|me)\b)/i) || [])[0] || '';
+
+        // Sections
+        const sections = SECTIONS.map(s => {
+            const byHeading = lines.some(l => sectionOf(l) === s);
+            const status = byHeading ? 'pass' : (s.loose.test(lower) ? 'partial' : 'fail');
+            return { ...s, status };
+        });
+        const coreFound = sections.filter(s => s.core && s.status !== 'fail').length;
+
+        // Gatekeeper
+        let gate = { passed: true, step: 4, title: '', reason: '', tips: [] };
+        if (text.length < 100) {
+            gate = { passed: false, step: 1, title: 'Text is not readable', reason: `Only ${text.length} characters of selectable text were found. This usually means the PDF is a scanned image or was exported as a picture — an ATS sees it as blank.`, tips: ['Export the resume from Word / Google Docs using "Save as PDF" (not "Print to image").', 'Avoid putting your resume content inside images or text boxes.', 'Try the "Paste text" tab to check the content itself.'] };
+        } else if (!email && !phone) {
+            gate = { passed: false, step: 2, title: 'Contact details missing', reason: 'No valid email address or phone number could be found. Recruiters (and the ATS) need a way to reach you.', tips: ['Put your email and phone as plain text at the top — not in the header/footer area or an image.', 'Use a standard format, e.g. name@gmail.com and +91 98765 43210.'] };
+        } else if (coreFound < 2) {
+            gate = { passed: false, step: 3, title: 'Standard sections missing', reason: 'The engine could not find at least two standard sections (Experience, Education, Skills, Projects). An ATS relies on these headings to map your data.', tips: ['Use plain headings like "Work Experience", "Education", "Skills", "Projects".', 'Avoid creative headings such as "My Journey" or "What I Know".', 'Avoid multi-column layouts and tables — many ATS read them out of order.'] };
         }
 
-        async function handleResumeUpload(event) {
-            const file = event.target.files[0];
-            const errorBox = document.getElementById('errorBox');
-            const loadingText = document.getElementById('loadingText');
-            const dashboard = document.getElementById('dashboard');
+        // Skills & role
+        const found = SKILLS.filter(s => s.re.test(lower));
+        const foundNames = new Set(found.map(s => s.name));
+        const role = doc.role ? { title: doc.role, core: (detectRole(doc.role.toLowerCase(), foundNames) || DEFAULT_ROLE).core } : detectRole(lower, foundNames);
 
-            errorBox.classList.add('hidden');
-            dashboard.classList.add('hidden');
-            if (!file) return;
+        // JD match
+        let jd = null;
+        if (jdText && jdText.trim().split(/\s+/).length >= 15) {
+            const keywords = extractJdKeywords(jdText);
+            const matched = [], missing = [];
+            for (const k of keywords) {
+                const hit = k.skill ? k.skill.re.test(lower) : new RegExp(`(?<![a-z0-9])${reEsc(k.term)}`, 'i').test(lower);
+                (hit ? matched : missing).push(k.term);
+            }
+            jd = { keywords, matched, missing, pct: keywords.length ? Math.round(matched.length / keywords.length * 100) : 0 };
+        }
 
-            if (file.type !== 'application/pdf') {
-                showError("Kewal PDF File upload karein!");
-                event.target.value = '';
+        // Impact & language
+        const metricRe = /(\d+(\.\d+)?\s?%|[$₹€£]\s?\d|\b\d+(\.\d+)?\s?(k|m|x|lakh|lakhs|crore|cr|million|billion|hrs?|hours)\b|\b\d[\d,]*\+|\b\d{2,}[\d,]*\s+(users|customers|clients|students|people|projects|requests|members|downloads|transactions|records|tickets|endpoints|teams?|engineers|applications|apps|websites|orders|leads|stores|companies|countries|cities))/i;
+        const quantified = lines.filter(l => metricRe.test(l) && !/@/.test(l)).length;
+        const tokens = new Set(lower.match(/[a-z]+/g) || []);
+        const verbsUsed = ACTION_VERBS.filter(v => tokens.has(v));
+        const bulletLines = lines.filter(l => /^[•\-*▪●◦➢►✓■◆○➤⁃–]\s*/.test(l) || /^[\uE000-\uF8FF]/.test(l));
+        const verbLed = lines.filter(l => ACTION_SET.has((l.replace(/^[^A-Za-z]+/, '').split(/\s/)[0] || '').toLowerCase())).length;
+        const weak = WEAK_PHRASES.map(w => ({ ...w, count: (lower.match(new RegExp(`\\b${reEsc(w.phrase)}\\b`, 'g')) || []).length })).filter(w => w.count);
+        const weakCount = weak.reduce((n, w) => n + w.count, 0);
+        const pronouns = (lower.match(/\b(i|me|my|myself)\b/g) || []).length;
+        const iconGlyphs = (text.match(/[\uE000-\uF8FF]/g) || []).length;
+        const dateRanges = (text.match(/((jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*'?\d{2,4}|\b\d{1,2}\/\d{2,4}|\b(19|20)\d{2})\s*(-|–|—|to)\s*((jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*'?\d{2,4}|\d{1,2}\/\d{2,4}|(19|20)\d{2}|present|current|now|till date)/gi) || []).length;
+
+        // ----- Scoring (100) -----
+        const sectionPts = sections.reduce((n, s) => n + (s.status === 'pass' ? s.weight : s.status === 'partial' ? s.weight / 2 : 0), 0);
+        const contactPts = (email ? 4 : 0) + (phone ? 3 : 0) + (linkedin ? 2 : 0) + (website ? 1 : 0);
+        const impactPts = [0, 4, 7, 10, 10, 13, 13][quantified] ?? 15;
+        const languagePts = Math.max(0, Math.min(verbsUsed.length, 8) / 8 * 10 + (5 - Math.min(weakCount, 5)) - (pronouns > 3 ? 2 : 0));
+        const coreHit = role.core.filter(c => foundNames.has(c)).length;
+        const keywordPts = jd ? jd.pct / 100 * 20 : Math.min(found.length, 10) * 1.4 + (role.core.length ? coreHit / role.core.length * 6 : 0);
+        const lengthPts = (words >= 250 && words <= 950 ? 10 : (words >= 150 && words <= 1300) ? 7 : 3) + (pages <= 2 ? 5 : pages === 3 ? 2 : 0);
+
+        const breakdown = [
+            { label: 'Section structure', icon: 'layout-template', score: sectionPts, max: 25 },
+            { label: jd ? 'Job description match' : 'Keywords & skills', icon: 'key-round', score: keywordPts, max: 20 },
+            { label: 'Quantified impact', icon: 'trending-up', score: impactPts, max: 15 },
+            { label: 'Action-oriented language', icon: 'zap', score: languagePts, max: 15 },
+            { label: 'Length & readability', icon: 'ruler', score: lengthPts, max: 15 },
+            { label: 'Contact completeness', icon: 'contact', score: contactPts, max: 10 }
+        ].map(b => ({ ...b, score: Math.round(Math.min(b.score, b.max) * 10) / 10 }));
+        const score = Math.min(100, Math.round(breakdown.reduce((n, b) => n + b.score, 0)));
+
+        // ----- Checklist -----
+        const checks = [
+            { label: 'Selectable text', status: 'pass', detail: `${words} words parsed${doc.pages ? ` from ${doc.pages} page${doc.pages > 1 ? 's' : ''}` : ''}` },
+            { label: 'Email address', status: email ? 'pass' : 'fail', detail: email || 'Not found' },
+            { label: 'Phone number', status: phone ? 'pass' : 'fail', detail: phone || 'Not found' },
+            { label: 'LinkedIn profile', status: linkedin ? 'pass' : 'warn', detail: linkedin || 'Add linkedin.com/in/your-name' },
+            { label: 'GitHub / portfolio', status: website ? 'pass' : 'warn', detail: website || 'Optional, but recommended for tech roles' },
+            ...sections.filter(s => s.key !== 'certifications').map(s => ({
+                label: `${s.name} section`,
+                status: s.status === 'pass' ? 'pass' : s.status === 'partial' ? 'warn' : (s.core ? 'fail' : 'warn'),
+                detail: s.status === 'pass' ? 'Clear heading detected' : s.status === 'partial' ? 'Mentioned, but no clear heading' : 'Not found'
+            })),
+            { label: 'Date ranges', status: dateRanges >= 1 ? 'pass' : 'warn', detail: dateRanges ? `${dateRanges} date range${dateRanges > 1 ? 's' : ''} found` : 'Use "Jun 2023 – Present" style dates' },
+            { label: 'Bullet points', status: bulletLines.length >= 3 || verbLed >= 3 ? 'pass' : 'warn', detail: bulletLines.length ? `${bulletLines.length} bullet lines` : 'Use bullets for achievements' },
+            { label: 'Icon fonts / special glyphs', status: iconGlyphs > 3 ? 'warn' : 'pass', detail: iconGlyphs > 3 ? `${iconGlyphs} unreadable glyphs (icons?)` : 'None that confuse parsers' },
+            { label: 'Page count', status: pages <= 2 ? 'pass' : 'warn', detail: `${pages} page${pages > 1 ? 's' : ''}${pages > 2 ? ' — aim for 1–2' : ''}` }
+        ];
+
+        // ----- Recommendations -----
+        const recs = [];
+        const missingCore = sections.filter(s => s.core && s.status === 'fail');
+        if (missingCore.length) recs.push({ p: 'high', title: `Add a ${missingCore.map(s => s.name).join(' and ')} section`, detail: 'ATS software maps your data by standard headings. Missing sections mean missing data.' });
+        const partial = sections.filter(s => s.status === 'partial' && s.weight);
+        if (partial.length) recs.push({ p: 'medium', title: `Use a clear heading for ${partial.map(s => s.name).join(', ')}`, detail: 'Put each heading on its own line using a standard name, e.g. "Work Experience".' });
+        if (jd && jd.pct < 60) recs.push({ p: 'high', title: `Raise your job match from ${jd.pct}% to 60%+`, detail: `Work these missing keywords into your experience bullets (truthfully): ${jd.missing.slice(0, 6).join(', ')}.` });
+        if (quantified < 3) recs.push({ p: 'high', title: 'Quantify your impact', detail: `Only ${quantified} line${quantified === 1 ? '' : 's'} contain numbers. Add metrics like "cut load time by 40%", "served 2,000+ users" or "saved 6 hrs/week".` });
+        if (weak.length) recs.push({ p: 'medium', title: 'Replace passive phrases', detail: weak.map(w => `"${w.phrase}" → ${w.fix}`).join(' · ') });
+        if (verbsUsed.length < 5) recs.push({ p: 'medium', title: 'Start bullets with strong action verbs', detail: 'Try: Built, Led, Optimized, Automated, Launched, Reduced, Scaled.' });
+        if (!jd && found.length < 6) recs.push({ p: 'high', title: 'Add more relevant technical skills', detail: `Only ${found.length} recognised skill${found.length === 1 ? '' : 's'}. Add a dedicated Skills section with the tools you actually use.` });
+        if (!jd) recs.push({ p: 'low', title: 'Paste a job description for a sharper score', detail: 'Matching against the exact posting is the single best way to tailor a resume.' });
+        if (!linkedin) recs.push({ p: 'low', title: 'Add your LinkedIn URL', detail: 'Most recruiters check LinkedIn before calling. Use a custom URL: linkedin.com/in/your-name.' });
+        if (pronouns > 3) recs.push({ p: 'low', title: 'Drop first-person pronouns', detail: `Found ${pronouns} uses of "I / me / my". Resumes read better in implied first person: "Built…", not "I built…".` });
+        if (words < 200) recs.push({ p: 'medium', title: 'Add more detail', detail: `At ${words} words the resume looks thin. Aim for 300–900 words with 3–5 bullets per role.` });
+        if (words > 1300 || pages > 2) recs.push({ p: 'medium', title: 'Tighten the resume', detail: 'Keep it to 1 page (freshers) or 2 pages (experienced). Cut older or less relevant bullets.' });
+        if (iconGlyphs > 3) recs.push({ p: 'medium', title: 'Remove icon fonts', detail: 'Icons next to contact details often parse as garbage characters. Use plain text labels instead.' });
+        const order = { high: 0, medium: 1, low: 2 };
+        recs.sort((a, b) => order[a.p] - order[b.p]);
+
+        const missingSkills = jd ? jd.missing : role.core.filter(c => !foundNames.has(c)).slice(0, 8);
+
+        return {
+            gate, score, breakdown, checks, recs, sections, jd, role, found, missingSkills, verbsUsed, weak, quantified, words, pages,
+            contact: { email, phone, linkedin, website }, name: doc.name || guessName(lines, doc.fileName), lines, source: doc.source
+        };
+    }
+
+    /* ---------------- Analyzer UI ---------------- */
+
+    const STEPS = [
+        { label: 'Parse document', icon: 'file-search' },
+        { label: 'Text readability', icon: 'scan-text' },
+        { label: 'Contact details', icon: 'contact' },
+        { label: 'Section structure', icon: 'layout-list' },
+        { label: 'ATS scoring', icon: 'gauge' }
+    ];
+
+    function renderPipeline(states) {
+        const styles = {
+            idle: 'border-slate-800 text-slate-500',
+            run: 'border-cyan-500/40 text-cyan-300 bg-cyan-500/5',
+            pass: 'border-emerald-500/30 text-emerald-300 bg-emerald-500/5',
+            fail: 'border-rose-500/40 text-rose-300 bg-rose-500/10',
+            skip: 'border-slate-800 text-slate-600 opacity-60'
+        };
+        const icons = { idle: 'circle', run: 'loader-circle', pass: 'circle-check', fail: 'circle-x', skip: 'circle-minus' };
+        $('pipeline').innerHTML = STEPS.map((s, i) => `
+            <li class="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 p-3 rounded-2xl border ${styles[states[i]]} transition">
+                <i data-lucide="${icons[states[i]]}" class="w-5 h-5 ${states[i] === 'run' ? 'spin' : ''}"></i>
+                <div><p class="text-[10px] uppercase tracking-wider opacity-70">Step ${i + 1}</p><p class="text-xs font-semibold">${s.label}</p></div>
+            </li>`).join('');
+        refreshIcons();
+    }
+
+    async function runAnalysis(doc) {
+        const btn = $('analyzeBtn');
+        btn.disabled = true;
+        $('results').classList.add('hidden');
+        $('gateError').classList.add('hidden');
+        $('pipelineCard').classList.remove('hidden');
+        $('pipelineStatus').textContent = 'Running checks…';
+
+        const result = analyze(doc, $('jdInput').value);
+        const states = STEPS.map(() => 'idle');
+        for (let i = 0; i < STEPS.length; i++) {
+            states[i] = 'run'; renderPipeline(states);
+            await sleep(260);
+            if (!result.gate.passed && i === result.gate.step) {
+                states[i] = 'fail';
+                for (let j = i + 1; j < STEPS.length; j++) states[j] = 'skip';
+                renderPipeline(states);
+                $('pipelineStatus').innerHTML = '<span class="text-rose-400 font-semibold">Halted — fix formatting first</span>';
+                $('gateErrorTitle').textContent = result.gate.title;
+                $('gateErrorMsg').textContent = result.gate.reason;
+                $('gateErrorTips').innerHTML = result.gate.tips.map(t => `<li class="flex gap-2"><i data-lucide="arrow-right" class="w-3.5 h-3.5 text-rose-300 shrink-0 mt-0.5"></i>${esc(t)}</li>`).join('');
+                $('gateError').classList.remove('hidden');
+                refreshIcons();
+                btn.disabled = false;
                 return;
             }
+            states[i] = 'pass';
+        }
+        renderPipeline(states);
+        $('pipelineStatus').innerHTML = '<span class="text-emerald-400 font-semibold">All formatting checks passed</span>';
+        state.analysis = result;
+        renderResults(result);
+        btn.disabled = false;
+        $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
-            loadingText.classList.remove('hidden');
+    function grade(score) {
+        if (score >= 85) return { label: 'Excellent', color: '#34d399', tw: 'text-emerald-400', blurb: 'This resume is well-structured and highly ATS-friendly. Fine-tune keywords per application.' };
+        if (score >= 70) return { label: 'Good', color: '#38bdf8', tw: 'text-sky-400', blurb: 'Solid foundation. A few targeted fixes below will push you into the top tier.' };
+        if (score >= 50) return { label: 'Needs work', color: '#fbbf24', tw: 'text-amber-400', blurb: 'An ATS will parse it, but it is unlikely to rank highly yet. Start with the high-priority fixes.' };
+        return { label: 'At risk', color: '#fb7185', tw: 'text-rose-400', blurb: 'High chance of being filtered out. Work through the recommendations from top to bottom.' };
+    }
 
+    function chip(text, kind) {
+        const cls = {
+            ok: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25',
+            miss: 'bg-amber-500/10 text-amber-300 border-amber-500/25',
+            neutral: 'bg-slate-800/80 text-slate-200 border-slate-700',
+            bad: 'bg-rose-500/10 text-rose-300 border-rose-500/25'
+        }[kind];
+        return `<span class="text-xs border px-2.5 py-1 rounded-lg ${cls}">${esc(text)}</span>`;
+    }
+
+    function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+
+    function renderResults(r) {
+        const g = grade(r.score);
+        const C = 2 * Math.PI * 54;
+        const role = r.role.title;
+        const enc = encodeURIComponent(role);
+        const portals = [
+            { name: 'LinkedIn', url: `https://www.linkedin.com/jobs/search/?keywords=${enc}`, color: 'bg-sky-600' },
+            { name: 'Naukri', url: `https://www.naukri.com/${slug(role)}-jobs`, color: 'bg-blue-600' },
+            { name: 'Indeed', url: `https://www.indeed.com/jobs?q=${enc}`, color: 'bg-indigo-600' },
+            { name: 'Glassdoor', url: `https://www.glassdoor.co.in/Job/jobs.htm?sc.keyword=${enc}`, color: 'bg-emerald-600' },
+            { name: 'Google Jobs', url: `https://www.google.com/search?q=${enc}+jobs&ibp=htl;jobs`, color: 'bg-rose-600' }
+        ];
+        const statusIcon = { pass: ['circle-check', 'text-emerald-400'], warn: ['circle-alert', 'text-amber-400'], fail: ['circle-x', 'text-rose-400'] };
+        const pBadge = { high: 'bg-rose-500/15 text-rose-300 border-rose-500/25', medium: 'bg-amber-500/15 text-amber-300 border-amber-500/25', low: 'bg-slate-700/50 text-slate-300 border-slate-600' };
+        const grouped = r.found.reduce((m, s) => ((m[s.group] = m[s.group] || []).push(s.name), m), {});
+        const passCount = r.checks.filter(c => c.status === 'pass').length;
+
+        $('results').innerHTML = `
+        <!-- Score hero -->
+        <div class="glass glow-border rounded-3xl p-5 sm:p-7 fade-up">
+            <div class="grid grid-cols-1 md:grid-cols-[auto,1fr] gap-6 md:gap-10 items-center">
+                <div class="relative w-44 h-44 mx-auto">
+                    <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(148,163,184,.12)" stroke-width="9"/>
+                        <circle id="scoreRing" class="ring-track" cx="60" cy="60" r="54" fill="none" stroke="${g.color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}"/>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="scoreNum" class="font-display text-5xl font-extrabold">0</span>
+                        <span class="text-xs text-slate-400">out of 100</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-slate-800 ${g.tw}">${g.label}</span>
+                        <span class="text-xs text-slate-400">${esc(r.source || '')} · ${r.words} words · ${r.pages} page${r.pages > 1 ? 's' : ''}</span>
+                    </div>
+                    <h3 class="font-display text-2xl sm:text-3xl font-bold mt-3">${esc(r.name)}</h3>
+                    <p class="text-sm text-slate-400 mt-1">Detected profile: <span class="text-cyan-300 font-semibold">${esc(role)}</span></p>
+                    <p class="text-sm text-slate-300 mt-3 leading-relaxed max-w-xl">${g.blurb}</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">
+                        <div class="rounded-xl bg-slate-950/60 border border-slate-800 p-3"><p class="text-[11px] text-slate-500">Checks passed</p><p class="font-bold mt-0.5">${passCount}/${r.checks.length}</p></div>
+                        <div class="rounded-xl bg-slate-950/60 border border-slate-800 p-3"><p class="text-[11px] text-slate-500">Skills found</p><p class="font-bold mt-0.5">${r.found.length}</p></div>
+                        <div class="rounded-xl bg-slate-950/60 border border-slate-800 p-3"><p class="text-[11px] text-slate-500">Quantified lines</p><p class="font-bold mt-0.5">${r.quantified}</p></div>
+                        <div class="rounded-xl bg-slate-950/60 border border-slate-800 p-3"><p class="text-[11px] text-slate-500">${r.jd ? 'JD match' : 'Action verbs'}</p><p class="font-bold mt-0.5">${r.jd ? r.jd.pct + '%' : r.verbsUsed.length}</p></div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-5">
+                        <button onclick="downloadReport()" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-slate-900 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition"><i data-lucide="file-down" class="w-4 h-4"></i> Download report</button>
+                        <button onclick="openInBuilder()" class="inline-flex items-center gap-1.5 text-xs font-semibold glass hover:bg-slate-800/70 px-3.5 py-2 rounded-xl transition"><i data-lucide="pencil-ruler" class="w-4 h-4"></i> Fix it in the builder</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <!-- Breakdown -->
+            <div class="glass rounded-3xl p-5 sm:p-6 fade-up">
+                <h3 class="text-sm font-semibold flex items-center gap-2 mb-5"><i data-lucide="chart-bar" class="w-4 h-4 text-cyan-400"></i> Score breakdown</h3>
+                <div class="space-y-4">
+                    ${r.breakdown.map(b => {
+                        const pct = b.score / b.max * 100;
+                        const col = pct >= 80 ? 'from-emerald-400 to-teal-400' : pct >= 50 ? 'from-sky-400 to-indigo-400' : 'from-amber-400 to-rose-400';
+                        return `<div>
+                            <div class="flex items-center justify-between text-xs mb-1.5">
+                                <span class="flex items-center gap-2 text-slate-300"><i data-lucide="${b.icon}" class="w-3.5 h-3.5 text-slate-500"></i>${b.label}</span>
+                                <span class="font-semibold tabular-nums">${b.score}<span class="text-slate-500"> / ${b.max}</span></span>
+                            </div>
+                            <div class="h-2 rounded-full bg-slate-800 overflow-hidden"><div class="bar-fill h-full rounded-full bg-gradient-to-r ${col}" style="width:0" data-w="${pct}"></div></div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="glass rounded-3xl p-5 sm:p-6 fade-up">
+                <h3 class="text-sm font-semibold flex items-center gap-2 mb-4"><i data-lucide="list-checks" class="w-4 h-4 text-indigo-400"></i> Action plan</h3>
+                ${r.recs.length ? `<ol class="space-y-3">${r.recs.map(rec => `
+                    <li class="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800">
+                        <div class="flex items-start gap-2.5">
+                            <span class="text-[10px] font-bold uppercase tracking-wider border px-1.5 py-0.5 rounded-md shrink-0 ${pBadge[rec.p]}">${rec.p}</span>
+                            <div><p class="text-sm font-semibold text-slate-100">${esc(rec.title)}</p><p class="text-xs text-slate-400 mt-1 leading-relaxed">${esc(rec.detail)}</p></div>
+                        </div>
+                    </li>`).join('')}</ol>` : `<p class="text-sm text-emerald-300">Nothing major to fix — great work.</p>`}
+            </div>
+        </div>
+
+        <!-- Keywords -->
+        <div class="glass rounded-3xl p-5 sm:p-6 fade-up">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h3 class="text-sm font-semibold flex items-center gap-2"><i data-lucide="key-round" class="w-4 h-4 text-amber-400"></i> ${r.jd ? 'Job description keyword match' : 'Skills & keywords'}</h3>
+                ${r.jd ? `<span class="text-xs font-semibold px-2.5 py-1 rounded-lg ${r.jd.pct >= 60 ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}">${r.jd.matched.length} of ${r.jd.keywords.length} keywords · ${r.jd.pct}%</span>` : ''}
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-[11px] uppercase tracking-wider font-semibold text-emerald-400 mb-2.5">${r.jd ? 'Matched in your resume' : 'Detected in your resume'}</p>
+                    ${r.jd
+                        ? `<div class="flex flex-wrap gap-2">${r.jd.matched.length ? r.jd.matched.map(k => chip(k, 'ok')).join('') : '<span class="text-xs text-rose-300">No keyword overlap yet</span>'}</div>`
+                        : (Object.keys(grouped).length ? Object.entries(grouped).map(([grp, list]) => `<div class="mb-3"><p class="text-[11px] text-slate-500 mb-1.5">${esc(grp)}</p><div class="flex flex-wrap gap-2">${list.map(k => chip(k, 'neutral')).join('')}</div></div>`).join('') : '<span class="text-xs text-rose-300">No recognised technical skills</span>')}
+                </div>
+                <div>
+                    <p class="text-[11px] uppercase tracking-wider font-semibold text-amber-400 mb-2.5">${r.jd ? 'Missing from your resume' : `Commonly expected for ${esc(role)}`}</p>
+                    <div class="flex flex-wrap gap-2">${r.missingSkills.length ? r.missingSkills.map(k => chip('+ ' + k, 'miss')).join('') : '<span class="text-xs text-emerald-300">You cover all the core keywords.</span>'}</div>
+                    <p class="text-[11px] text-slate-500 mt-3">Only add keywords you can genuinely back up in an interview.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
+            <!-- Checklist -->
+            <div class="lg:col-span-3 glass rounded-3xl p-5 sm:p-6 fade-up">
+                <h3 class="text-sm font-semibold flex items-center gap-2 mb-4"><i data-lucide="clipboard-check" class="w-4 h-4 text-emerald-400"></i> Formatting checklist</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    ${r.checks.map(c => `
+                        <div class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                            <i data-lucide="${statusIcon[c.status][0]}" class="w-4 h-4 shrink-0 mt-0.5 ${statusIcon[c.status][1]}"></i>
+                            <div class="min-w-0"><p class="text-xs font-semibold text-slate-200">${esc(c.label)}</p><p class="text-[11px] text-slate-400 truncate">${esc(c.detail)}</p></div>
+                        </div>`).join('')}
+                </div>
+            </div>
+
+            <!-- Language + jobs -->
+            <div class="lg:col-span-2 space-y-5">
+                <div class="glass rounded-3xl p-5 sm:p-6 fade-up">
+                    <h3 class="text-sm font-semibold flex items-center gap-2 mb-3"><i data-lucide="zap" class="w-4 h-4 text-yellow-400"></i> Language strength</h3>
+                    <p class="text-[11px] uppercase tracking-wider font-semibold text-slate-500 mb-2">Strong verbs used (${r.verbsUsed.length})</p>
+                    <div class="flex flex-wrap gap-1.5">${r.verbsUsed.length ? r.verbsUsed.slice(0, 14).map(v => chip(v, 'ok')).join('') : '<span class="text-xs text-amber-300">None detected</span>'}</div>
+                    ${r.weak.length ? `<p class="text-[11px] uppercase tracking-wider font-semibold text-slate-500 mt-4 mb-2">Weak phrases</p>
+                        <ul class="space-y-1.5">${r.weak.map(w => `<li class="text-xs flex flex-wrap items-center gap-1.5">${chip(`${w.phrase} ×${w.count}`, 'bad')}<i data-lucide="arrow-right" class="w-3 h-3 text-slate-500"></i><span class="text-slate-300">${esc(w.fix)}</span></li>`).join('')}</ul>` : ''}
+                </div>
+                <div class="glass rounded-3xl p-5 sm:p-6 fade-up">
+                    <h3 class="text-sm font-semibold flex items-center gap-2"><i data-lucide="briefcase" class="w-4 h-4 text-teal-400"></i> Open roles: ${esc(role)}</h3>
+                    <div class="grid grid-cols-2 gap-2 mt-4">
+                        ${portals.map(p => `<a href="${p.url}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between gap-2 text-xs font-semibold px-3 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-600 transition"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full ${p.color}"></span>${p.name}</span><i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-slate-500"></i></a>`).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        $('results').classList.remove('hidden');
+        refreshIcons();
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            $('scoreRing').style.strokeDashoffset = C * (1 - r.score / 100);
+            document.querySelectorAll('#results .bar-fill').forEach(el => el.style.width = el.dataset.w + '%');
+            animateNumber($('scoreNum'), r.score);
+        }));
+    }
+
+    function animateNumber(el, to, ms = 1100) {
+        let start = null;
+        const step = (t) => {
+            if (start === null) start = t;
+            const p = Math.min(Math.max((t - start) / ms, 0), 1);
+            el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3)));
+            if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+
+    function toast(msg) {
+        $('toastMsg').textContent = msg;
+        $('toast').classList.remove('hidden');
+        clearTimeout(toast.t);
+        toast.t = setTimeout(() => $('toast').classList.add('hidden'), 2600);
+    }
+
+    /* ---------------- Input handling ---------------- */
+
+    async function handleFile(file) {
+        if (!file) return;
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['pdf', 'docx', 'txt'].includes(ext)) return toast('Please upload a PDF, DOCX or TXT file.');
+        if (file.size > MAX_FILE_BYTES) return toast('File is larger than 5 MB.');
+
+        $('fileName').textContent = file.name;
+        $('fileMeta').textContent = `${(file.size / 1024).toFixed(0)} KB`;
+        $('fileChip').classList.remove('hidden');
+
+        try {
+            state.doc = await extractDocument(file);
+            runAnalysis(state.doc);
+        } catch (err) {
+            console.error(err);
+            state.doc = null;
+            $('pipelineCard').classList.remove('hidden');
+            renderPipeline(['fail', 'skip', 'skip', 'skip', 'skip']);
+            $('pipelineStatus').innerHTML = '<span class="text-rose-400 font-semibold">Could not read file</span>';
+            $('gateErrorTitle').textContent = 'File could not be read';
+            $('gateErrorMsg').textContent = err.message && /load/.test(err.message) ? err.message : 'The file looks corrupted or password-protected.';
+            $('gateErrorTips').innerHTML = '<li>Re-export the resume as a PDF from Word / Google Docs and try again.</li>';
+            $('gateError').classList.remove('hidden');
+        }
+    }
+
+    function clearFile() {
+        $('resumeInput').value = '';
+        $('fileChip').classList.add('hidden');
+        state.doc = null;
+    }
+
+    function setTab(tab) {
+        state.inputMode = tab;
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            const on = b.dataset.tab === tab;
+            b.classList.toggle('bg-slate-800', on);
+            b.classList.toggle('text-white', on);
+            b.classList.toggle('text-slate-400', !on);
+        });
+        $('tab-upload').classList.toggle('hidden', tab !== 'upload');
+        $('tab-paste').classList.toggle('hidden', tab !== 'paste');
+    }
+
+    function onAnalyzeClick() {
+        if (state.inputMode === 'paste') {
+            const txt = $('pasteInput').value;
+            if (!txt.trim()) return toast('Paste your resume text first.');
+            return runAnalysis({ lines: txt.split(/\r?\n/), pages: null, source: 'Pasted text' });
+        }
+        if (!state.doc) return toast('Upload a resume first (or switch to "Paste text").');
+        runAnalysis(state.doc);
+    }
+
+    /* ---------------- Builder ---------------- */
+
+    const FIELDS = ['fullName', 'jobRole', 'email', 'phone', 'location', 'linkedin', 'website', 'summary', 'skills', 'experience', 'projects', 'education', 'certifications'];
+    const DRAFT_KEY = 'ats-engine-draft-v1';
+    const form = $('resumeForm');
+
+    const SAMPLE = {
+        fullName: 'Rahul Sharma', jobRole: 'Frontend Developer', email: 'rahul.sharma@example.com', phone: '+91 98765 43210',
+        location: 'Bengaluru, India', linkedin: 'linkedin.com/in/rahulsharma', website: 'github.com/rahulsharma',
+        summary: 'Frontend developer with 2+ years of experience building fast, accessible React applications. Shipped features used by 50,000+ users and cut page load times by 40% through performance engineering.',
+        skills: 'Languages: JavaScript, TypeScript, HTML, CSS, SQL\nFrameworks: React, Next.js, Redux, Tailwind CSS, Node.js\nTools: Git, Docker, AWS, Jest, Figma',
+        experience: 'Frontend Developer — Acme Technologies | Jun 2023 – Present\n- Built a React + TypeScript analytics dashboard used by 2,000+ customers, cutting report time by 40%\n- Reduced bundle size by 35% with code-splitting and lazy loading, improving Lighthouse score from 62 to 94\n- Led migration of 120+ components to a shared design system, saving ~6 hours/week of UI work\n- Mentored 3 interns and introduced Jest unit testing, raising coverage from 20% to 75%\n\nSoftware Engineering Intern — PixelSoft | Jan 2023 – May 2023\n- Developed REST API integrations for a booking flow handling 10k+ monthly requests\n- Automated deployments with GitHub Actions, reducing release time from 2 hours to 15 minutes',
+        projects: 'ShopEase — E-commerce platform | React, Node.js, Express, MongoDB\n- Implemented JWT authentication and Razorpay checkout; processed 500+ test orders\n- Designed responsive UI with Tailwind CSS achieving 98 accessibility score',
+        education: 'B.Tech, Computer Science — XYZ Institute of Technology | 2019 – 2023 | CGPA 8.4/10',
+        certifications: '- AWS Certified Cloud Practitioner (2024)\n- Winner, Smart India Hackathon 2022 (team of 6)'
+    };
+
+    function getData() {
+        const fd = new FormData(form);
+        return Object.fromEntries(FIELDS.map(f => [f, (fd.get(f) || '').toString().trim()]));
+    }
+
+    function setData(data) {
+        FIELDS.forEach(f => { form.elements[f].value = data[f] || ''; });
+        onBuilderInput();
+    }
+
+    const BUILDER_SECTIONS = [
+        { key: 'summary', title: 'Professional Summary', para: true },
+        { key: 'skills', title: 'Technical Skills' },
+        { key: 'experience', title: 'Work Experience' },
+        { key: 'projects', title: 'Projects' },
+        { key: 'education', title: 'Education' },
+        { key: 'certifications', title: 'Certifications & Achievements' }
+    ];
+
+    const isBullet = (l) => /^\s*[-•*▪●◦➢►✓■]\s*/.test(l);
+    const stripBullet = (l) => l.replace(/^\s*[-•*▪●◦➢►✓■]\s*/, '');
+    const contactParts = (d) => [d.email, d.phone, d.location, d.linkedin, d.website].filter(Boolean);
+
+    function renderPreview() {
+        const d = getData();
+        const blocks = BUILDER_SECTIONS.filter(s => d[s.key]).map(s => {
+            const lines = d[s.key].split('\n').map(l => l.trim()).filter(Boolean);
+            const body = s.para
+                ? `<p>${esc(lines.join(' '))}</p>`
+                : lines.map(l => {
+                    if (isBullet(l)) return `<div class="bul">${esc(stripBullet(l))}</div>`;
+                    const m = s.key === 'skills' && l.match(/^([^:]{1,30}):\s*(.+)$/);
+                    return m ? `<p><b>${esc(m[1])}:</b> ${esc(m[2])}</p>` : `<div class="sub">${esc(l)}</div>`;
+                }).join('');
+            return `<h4>${s.title}</h4>${body}`;
+        }).join('');
+
+        $('preview').innerHTML = (d.fullName || d.email || blocks) ? `
+            <div style="text-align:center">
+                <div style="font-size:20px;font-weight:700;letter-spacing:.02em">${esc(d.fullName || 'Your Name')}</div>
+                ${d.jobRole ? `<div style="font-size:11px;color:#334155;margin-top:2px">${esc(d.jobRole)}</div>` : ''}
+                <div style="font-size:9.5px;color:#475569;margin-top:5px">${contactParts(d).map(esc).join('  |  ')}</div>
+            </div>${blocks}`
+            : `<div style="height:30rem;display:flex;align-items:center;justify-content:center;text-align:center;color:#94a3b8;font-size:12px">Start typing on the left — or click <b style="margin:0 4px">Load sample</b> — to see your resume here.</div>`;
+    }
+
+    function builderDoc(d) {
+        const lines = [d.fullName, d.jobRole, contactParts(d).join(' | ')];
+        BUILDER_SECTIONS.forEach(s => { if (d[s.key]) lines.push(s.title, ...d[s.key].split('\n')); });
+        return { lines, pages: null, source: 'Builder', name: d.fullName, role: d.jobRole };
+    }
+
+    let saveTimer;
+    function onBuilderInput() {
+        renderPreview();
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
             try {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                
-                let fullText = '';
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map(item => item.str).join(' ');
-                    fullText += pageText + ' ';
-                }
+                localStorage.setItem(DRAFT_KEY, JSON.stringify(getData()));
+                $('draftStatus').textContent = 'Draft saved';
+            } catch { /* storage unavailable — drafts simply won't persist */ }
+        }, 400);
+    }
 
-                const cleanedText = fullText.trim();
-                const lowerText = cleanedText.toLowerCase();
-
-                // STEP 1: Formatting Check First
-                if (cleanedText.length < 100) {
-                    showError("Formatting Error: PDF me text readable nahi hai (Scanned image lagti hai). Valid text PDF upload karein.");
-                    loadingText.classList.add('hidden');
-                    event.target.value = '';
-                    return;
-                }
-
-                // STEP 2: Section & Contact Formatting Evaluation
-                const formatResult = performFormattingCheck(cleanedText, lowerText);
-
-                // STEP 3: Check Gatekeeper - Agar Formatting Rules Fail Hue Toh Aage Run Nahi Hoga
-                if (!formatResult.passed) {
-                    showError(`Formatting Failed: ${formatResult.reason}`);
-                    loadingText.classList.add('hidden');
-                    event.target.value = '';
-                    return;
-                }
-
-                // STEP 4: Resume Formatting Passed! Ab ATS Engine run hoga.
-                extractedData.name = file.name.replace('.pdf', '');
-                extractedData.contact = 'Contact Verified';
-                
-                processAndDisplayResult(cleanedText, formatResult);
-
-            } catch (err) {
-                showError("File read karne me error aayi. Kripya valid Resume PDF try karein.");
+    function openInBuilder() {
+        const r = state.analysis;
+        if (!r) return;
+        const buckets = { header: [], summary: [], skills: [], experience: [], projects: [], education: [], certifications: [] };
+        let cur = 'header';
+        for (const line of r.lines) {
+            const sec = sectionOf(line);
+            if (sec) {
+                cur = sec.key;
+                const rest = line.split(/:\s*/).slice(1).join(': ').trim();
+                if (rest) buckets[cur].push(rest);
+                continue;
             }
-
-            loadingText.classList.add('hidden');
+            buckets[cur].push(isBullet(line) || /^[\uE000-\uF8FF]/.test(line) ? '- ' + stripBullet(line).replace(/^[\uE000-\uF8FF]\s*/, '') : line);
         }
+        setData({
+            fullName: r.name, jobRole: r.role.title, email: r.contact.email, phone: r.contact.phone, location: '',
+            linkedin: r.contact.linkedin, website: r.contact.website,
+            summary: buckets.summary.join(' '), skills: buckets.skills.join('\n'), experience: buckets.experience.join('\n'),
+            projects: buckets.projects.join('\n'), education: buckets.education.join('\n'), certifications: buckets.certifications.join('\n')
+        });
+        $('builder').scrollIntoView({ behavior: 'smooth' });
+        toast('Resume loaded into the builder — review each section.');
+    }
 
-        function performFormattingCheck(text, lowerText) {
-            let sectionScore = 0;
-            let sectionChecks = [];
+    /* ---------------- PDF generation (real text, ATS-parseable) ---------------- */
 
-            // Check Essential Sections
-            requiredSections.forEach(sec => {
-                const found = sec.keywords.some(k => lowerText.includes(k));
-                if (found) sectionScore += 10;
-                sectionChecks.push({ name: sec.name, passed: found });
+    const pdfSafe = (s) => String(s || '').replace(/₹/g, 'INR ').replace(/[–—]/g, '-').replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '');
+
+    function pdfWriter() {
+        if (!window.jspdf) { toast('PDF library failed to load. Check your connection.'); return null; }
+        const doc = new jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+        const M = 50, W = doc.internal.pageSize.getWidth() - M * 2, H = doc.internal.pageSize.getHeight();
+        const w = { doc, M, W, y: M };
+        w.ensure = (h) => { if (w.y + h > H - M) { doc.addPage(); w.y = M; } };
+        w.text = (str, { size = 10, style = 'normal', color = [15, 23, 42], indent = 0, after = 2, align = 'left' } = {}) => {
+            doc.setFont('helvetica', style); doc.setFontSize(size); doc.setTextColor(...color);
+            const lh = size * 1.32;
+            doc.splitTextToSize(pdfSafe(str), W - indent).forEach(line => {
+                w.ensure(lh);
+                doc.text(line, align === 'center' ? M + W / 2 : M + indent, w.y, { baseline: 'top', align });
+                w.y += lh;
             });
+            w.y += after;
+        };
+        w.bullet = (str) => {
+            w.ensure(13);
+            doc.setFillColor(15, 23, 42);
+            doc.circle(M + 4, w.y + 5.2, 1.4, 'F');
+            w.text(str, { indent: 13, after: 1.5 });
+        };
+        w.heading = (str) => {
+            w.y += 8; w.ensure(26);
+            w.text(str.toUpperCase(), { size: 10.5, style: 'bold', after: 0 });
+            doc.setDrawColor(148, 163, 184); doc.setLineWidth(0.6);
+            doc.line(M, w.y + 1, M + W, w.y + 1);
+            w.y += 6;
+        };
+        return w;
+    }
 
-            // Check Contact Details Regex
-            const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-            const phoneRegex = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/;
-            
-            const hasEmail = emailRegex.test(text);
-            const hasPhone = phoneRegex.test(text);
-            const hasMetrics = /\d+%|\$\d+|\d+\+?\s*(years|yrs|projects)/i.test(text);
+    function exportResumePdf() {
+        if (!form.reportValidity()) return;
+        const d = getData();
+        const w = pdfWriter();
+        if (!w) return;
+        w.doc.setProperties({ title: `${d.fullName} - Resume`, author: d.fullName, subject: d.jobRole, keywords: d.skills.replace(/\n/g, ', ') });
+        w.text(d.fullName, { size: 20, style: 'bold', align: 'center', after: 1 });
+        if (d.jobRole) w.text(d.jobRole, { size: 11, color: [51, 65, 85], align: 'center', after: 2 });
+        w.text(contactParts(d).join('  |  '), { size: 9, color: [71, 85, 105], align: 'center', after: 4 });
 
-            // Validation Conditions
-            let passed = true;
-            let reason = "";
+        BUILDER_SECTIONS.filter(s => d[s.key]).forEach(s => {
+            w.heading(s.title);
+            const lines = d[s.key].split('\n').map(l => l.trim()).filter(Boolean);
+            if (s.para) return w.text(lines.join(' '));
+            lines.forEach((l, i) => {
+                if (isBullet(l)) return w.bullet(stripBullet(l));
+                if (s.key === 'skills') return w.text(l, { after: 1.5 });
+                if (i > 0) w.y += 4;
+                w.text(l, { style: 'bold', after: 1.5 });
+            });
+        });
+        w.doc.save(`${(d.fullName || 'Resume').replace(/\s+/g, '_')}_ATS_Resume.pdf`);
+        toast('ATS-friendly PDF downloaded (real selectable text).');
+    }
 
-            if (!hasEmail && !hasPhone) {
-                passed = false;
-                reason = "Contact details (Email ya Phone Number) ka proper format nahi mila.";
-            } else if (sectionScore < 20) {
-                passed = false;
-                reason = "Resume Sections (Experience, Education, Skills, Projects) ki standard formatting missing hai.";
-            }
+    function downloadReport() {
+        const r = state.analysis;
+        if (!r) return;
+        const w = pdfWriter();
+        if (!w) return;
+        const g = grade(r.score);
+        w.doc.setProperties({ title: `${r.name} - ATS Report` });
+        w.text('ATS Resume Analysis Report', { size: 18, style: 'bold', after: 2 });
+        w.text(`${r.name}  ·  ${r.role.title}  ·  ${new Date().toLocaleDateString()}`, { size: 9, color: [100, 116, 139], after: 8 });
+        w.text(`Overall ATS score: ${r.score}/100 (${g.label})`, { size: 14, style: 'bold', after: 2 });
+        w.text(g.blurb, { color: [51, 65, 85] });
 
-            return {
-                passed: passed,
-                reason: reason,
-                sectionScore: sectionScore,
-                sectionChecks: sectionChecks,
-                hasEmail: hasEmail,
-                hasPhone: hasPhone,
-                hasMetrics: hasMetrics
-            };
-        }
+        w.heading('Score breakdown');
+        r.breakdown.forEach(b => w.text(`${b.label}: ${b.score} / ${b.max}`, { after: 1 }));
 
-        function generateCustomResume(e) {
-            e.preventDefault();
-            
-            const name = document.getElementById('fullName').value;
-            const role = document.getElementById('jobRole').value;
-            const email = document.getElementById('email').value;
-            const phone = document.getElementById('phone').value;
-            const rawSkills = document.getElementById('skillsInput').value;
-            const exp = document.getElementById('experienceInput').value;
+        w.heading('Action plan');
+        r.recs.forEach(rec => { w.text(`[${rec.p.toUpperCase()}] ${rec.title}`, { style: 'bold', after: 0 }); w.text(rec.detail, { color: [71, 85, 105], indent: 10, after: 4 }); });
 
-            const skillsArray = rawSkills.split(',').map(s => s.trim()).filter(s => s.length > 0);
-            const combinedText = `Name: ${name}. Email: ${email}. Phone: ${phone}. Experience Section: ${exp}. Technical Skills Section: ${rawSkills}. Education Section: B.Tech Degree. Projects Section: Application development.`;
+        w.heading(r.jd ? `Job description match (${r.jd.pct}%)` : 'Skills & keywords');
+        w.text(`${r.jd ? 'Matched' : 'Detected'}: ${(r.jd ? r.jd.matched : r.found.map(s => s.name)).join(', ') || 'none'}`);
+        w.text(`${r.jd ? 'Missing' : 'Suggested'}: ${r.missingSkills.join(', ') || 'none'}`);
 
-            extractedData = {
-                name: name,
-                contact: `${email} | ${phone}`,
-                text: exp,
-                skills: skillsArray,
-                role: role
-            };
+        w.heading('Formatting checklist');
+        r.checks.forEach(c => w.text(`${c.status === 'pass' ? 'PASS' : c.status === 'warn' ? 'WARN' : 'FAIL'}  ${c.label} — ${c.detail}`, { after: 1 }));
 
-            const formatResult = {
-                passed: true,
-                sectionScore: 40,
-                sectionChecks: [
-                    { name: 'Work Experience', passed: true },
-                    { name: 'Education', passed: true },
-                    { name: 'Skills', passed: true },
-                    { name: 'Projects', passed: true }
-                ],
-                hasEmail: true,
-                hasPhone: true,
-                hasMetrics: true
-            };
+        w.doc.save(`${r.name.replace(/\s+/g, '_')}_ATS_Report.pdf`);
+    }
 
-            processAndDisplayResult(combinedText, formatResult, true);
-        }
+    /* ---------------- Wire up ---------------- */
 
-        function processAndDisplayResult(text, formatResult, isCustom = false) {
-            const lowerText = text.toLowerCase();
-            
-            let foundSkills = isCustom 
-                ? extractedData.skills 
-                : knownSkills.filter(skill => lowerText.includes(skill.toLowerCase()));
-            
-            let role = isCustom ? extractedData.role : 'Software Engineer';
-            if (!isCustom) {
-                if (lowerText.includes('frontend') || lowerText.includes('react')) role = 'Frontend Developer';
-                else if (lowerText.includes('backend') || lowerText.includes('node')) role = 'Backend Developer';
-                else if (lowerText.includes('full stack') || lowerText.includes('fullstack')) role = 'Full Stack Developer';
-                else if (lowerText.includes('data') || lowerText.includes('python')) role = 'Data Analyst';
-                extractedData.role = role;
-                extractedData.text = text;
-                extractedData.skills = foundSkills;
-            }
+    document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+    $('resumeInput').addEventListener('change', e => handleFile(e.target.files[0]));
+    $('clearFileBtn').addEventListener('click', clearFile);
+    $('analyzeBtn').addEventListener('click', onAnalyzeClick);
+    $('jdInput').addEventListener('input', e => {
+        const n = e.target.value.trim() ? e.target.value.trim().split(/\s+/).length : 0;
+        $('jdCount').textContent = `${n} word${n === 1 ? '' : 's'}`;
+    });
 
-            // Calculate ATS Score after formatting clearance
-            let finalScore = formatResult.sectionScore; // Up to 40
-            if (formatResult.hasEmail) finalScore += 10;
-            if (formatResult.hasPhone) finalScore += 10;
-            if (formatResult.hasMetrics) finalScore += 10;
-            
-            finalScore += Math.min(foundSkills.length * 6, 25);
-            finalScore = Math.min(finalScore, 96);
+    const dz = $('dropzone');
+    ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+    ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+    dz.addEventListener('drop', e => handleFile(e.dataTransfer.files[0]));
 
-            // Render Passed Formatting Checklist
-            const checklistContainer = document.getElementById('formatChecklist');
-            checklistContainer.innerHTML = `
-                <div class="flex items-center gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
-                    <i data-lucide="${formatResult.hasEmail ? 'check-circle' : 'x-circle'}" class="${formatResult.hasEmail ? 'text-emerald-400' : 'text-rose-400'} w-4 h-4"></i>
-                    <span>Contact Email Formatting: <strong>${formatResult.hasEmail ? 'Formatted & Valid' : 'Missing'}</strong></span>
-                </div>
-                <div class="flex items-center gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
-                    <i data-lucide="${formatResult.hasPhone ? 'check-circle' : 'x-circle'}" class="${formatResult.hasPhone ? 'text-emerald-400' : 'text-rose-400'} w-4 h-4"></i>
-                    <span>Phone Number Formatting: <strong>${formatResult.hasPhone ? 'Formatted & Valid' : 'Missing'}</strong></span>
-                </div>
-                <div class="flex items-center gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
-                    <i data-lucide="${formatResult.hasMetrics ? 'check-circle' : 'alert-circle'}" class="${formatResult.hasMetrics ? 'text-emerald-400' : 'text-amber-400'} w-4 h-4"></i>
-                    <span>Metrics & Impact Numbers: <strong>${formatResult.hasMetrics ? 'Detected (% / Numbers)' : 'Low Metric Density'}</strong></span>
-                </div>
-                <div class="flex items-center gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
-                    <i data-lucide="check-circle" class="text-emerald-400 w-4 h-4"></i>
-                    <span>Detected Headings: <strong>${formatResult.sectionChecks.filter(s=>s.passed).map(s=>s.name).join(', ')}</strong></span>
-                </div>
-            `;
+    form.addEventListener('input', onBuilderInput);
+    form.addEventListener('submit', e => {
+        e.preventDefault();
+        runAnalysis(builderDoc(getData()));
+        $('analyze').scrollIntoView({ behavior: 'smooth' });
+    });
+    $('exportBtn').addEventListener('click', exportResumePdf);
+    $('sampleBtn').addEventListener('click', () => { setData(SAMPLE); toast('Sample resume loaded.'); });
+    $('resetBtn').addEventListener('click', () => { setData({}); try { localStorage.removeItem(DRAFT_KEY); } catch {} $('draftStatus').textContent = ''; });
 
-            document.getElementById('targetRole').innerText = role;
-            document.getElementById('jobRoleLabel').innerText = role;
-            document.getElementById('scoreBadge').innerText = `${finalScore}/100`;
-
-            const skillsContainer = document.getElementById('skillsList');
-            if (foundSkills.length === 0) {
-                skillsContainer.innerHTML = `<span class="text-xs text-rose-400">No technical skills detected</span>`;
-            } else {
-                skillsContainer.innerHTML = foundSkills.map(s => 
-                    `<span class="text-xs bg-slate-800 text-slate-200 px-3 py-1 rounded-lg border border-slate-700">${s}</span>`
-                ).join('');
-            }
-
-            const missingSkills = knownSkills.filter(s => !foundSkills.includes(s)).slice(0, 5);
-            document.getElementById('missingSkillsList').innerHTML = missingSkills.map(s => 
-                `<span class="text-xs bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-lg">+ ${s}</span>`
-            ).join('');
-
-            renderJobLinks(role);
-            
-            document.getElementById('dashboard').classList.remove('hidden');
-            if (window.lucide) lucide.createIcons();
-        }
-
-        function renderJobLinks(role) {
-            const encodedRole = encodeURIComponent(role);
-            const platforms = [
-                { name: 'LinkedIn Jobs', url: `https://www.linkedin.com/jobs/search/?keywords=${encodedRole}`, bg: 'bg-blue-600' },
-                { name: 'Google Jobs', url: `https://www.google.com/search?q=${encodedRole}+jobs+openings`, bg: 'bg-red-500' },
-                { name: 'Indeed', url: `https://www.indeed.com/jobs?q=${encodedRole}`, bg: 'bg-indigo-600' },
-                { name: 'Naukri.com', url: `https://www.naukri.com/${encodedRole.toLowerCase().replace(/%20/g, '-')}-jobs`, bg: 'bg-amber-600' }
-            ];
-
-            const container = document.getElementById('jobPlatformsList');
-            container.innerHTML = platforms.map(p => `
-                <div class="flex justify-between items-center bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                    <span class="font-semibold text-slate-200 text-xs">${p.name}</span>
-                    <a href="${p.url}" target="_blank" class="${p.bg} text-white text-xs font-semibold px-3 py-1.5 rounded-xl hover:opacity-90 transition">
-                        Apply Openings ↗
-                    </a>
-                </div>
-            `).join('');
-        }
-
-        function showError(msg) {
-            const errorBox = document.getElementById('errorBox');
-            const errorMsg = document.getElementById('errorMsg');
-            errorMsg.innerText = msg;
-            errorBox.classList.remove('hidden');
-            if (window.lucide) lucide.createIcons();
-        }
-
-        function downloadAtsPdf() {
-            document.getElementById('pdfName').innerText = extractedData.name || "Candidate Name";
-            document.getElementById('pdfContact').innerText = extractedData.contact;
-            document.getElementById('pdfRole').innerText = `Target Role: ${extractedData.role}`;
-            document.getElementById('pdfSkills').innerText = extractedData.skills.join(' • ');
-            document.getElementById('pdfText').innerText = extractedData.text.substring(0, 1500);
-
-            const element = document.getElementById('ats-pdf-template');
-            const opt = {
-                margin: 0.5,
-                filename: `${(extractedData.name || "Resume").replace(/\s+/g, '_')}_ATS_Resume.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
-            html2pdf().set(opt).from(element).save();
-        }
-
-        lucide.createIcons();
+    try {
+        const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+        if (saved) { FIELDS.forEach(f => { form.elements[f].value = saved[f] || ''; }); $('draftStatus').textContent = 'Draft restored'; }
+    } catch { /* ignore */ }
+    renderPreview();
+    refreshIcons();
     </script>
 </body>
 </html>
